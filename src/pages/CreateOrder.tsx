@@ -2,7 +2,21 @@ import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { STREETS, STREET_COORDS } from '@/types';
-import { MapPin, Home, MessageSquare, Send } from 'lucide-react';
+import { MapPin, Home, DoorOpen, MessageSquare, Send, CalendarIcon, Clock, Building } from 'lucide-react';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const TIMES = Array.from({ length: 28 }, (_, i) => {
+  const hour = Math.floor(i / 2) + 7;
+  const min = i % 2 === 0 ? '00' : '30';
+  return `${hour.toString().padStart(2, '0')}:${min}`;
+}).filter((_, i) => {
+  const hour = Math.floor(i / 2) + 7;
+  return hour <= 21;
+});
 
 const CreateOrder: React.FC = () => {
   const { addOrder } = useApp();
@@ -10,12 +24,15 @@ const CreateOrder: React.FC = () => {
   const [street, setStreet] = useState('');
   const [house, setHouse] = useState('');
   const [apartment, setApartment] = useState('');
+  const [entrance, setEntrance] = useState('');
+  const [scheduledDate, setScheduledDate] = useState<Date>();
+  const [scheduledTime, setScheduledTime] = useState('');
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!street || !house || !apartment) {
+    if (!street || !house || !apartment || !entrance || !scheduledDate || !scheduledTime) {
       setError('Заполните обязательные поля');
       return;
     }
@@ -24,6 +41,9 @@ const CreateOrder: React.FC = () => {
       street,
       house,
       apartment,
+      entrance,
+      scheduledDate: scheduledDate.toISOString(),
+      scheduledTime,
       comment,
       lat: coords.lat + (Math.random() - 0.5) * 0.005,
       lng: coords.lng + (Math.random() - 0.5) * 0.005,
@@ -35,11 +55,12 @@ const CreateOrder: React.FC = () => {
     <div className="space-y-4 animate-slide-up">
       <div>
         <h2 className="text-lg font-bold text-foreground">Новый заказ</h2>
-        <p className="text-sm text-muted-foreground">Укажите адрес для выноса мусора</p>
+        <p className="text-sm text-muted-foreground">Укажите адрес и время для выноса мусора</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="glass-card rounded-2xl p-4 space-y-3">
+          {/* Street */}
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Улица *</label>
             <div className="relative">
@@ -55,32 +76,97 @@ const CreateOrder: React.FC = () => {
             </div>
           </div>
 
+          {/* House */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Дом *</label>
+            <div className="relative">
+              <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="12"
+                value={house}
+                onChange={e => setHouse(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
+
+          {/* Apartment & Entrance */}
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Дом *</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Квартира *</label>
               <div className="relative">
-                <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <DoorOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="12"
-                  value={house}
-                  onChange={e => setHouse(e.target.value)}
+                  placeholder="45"
+                  value={apartment}
+                  onChange={e => setApartment(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
             <div className="flex-1">
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Кв. / Подъезд *</label>
-              <input
-                type="text"
-                placeholder="45, п.2"
-                value={apartment}
-                onChange={e => setApartment(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Подъезд *</label>
+              <div className="relative">
+                <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="2"
+                  value={entrance}
+                  onChange={e => setEntrance(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
             </div>
           </div>
 
+          {/* Date & Time */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Дата *</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-3 rounded-xl bg-secondary text-sm outline-none focus:ring-2 focus:ring-ring text-left",
+                      !scheduledDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                    {scheduledDate ? format(scheduledDate, 'd MMM', { locale: ru }) : 'Выберите'}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={scheduledDate}
+                    onSelect={setScheduledDate}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex-1">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Время *</label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <select
+                  value={scheduledTime}
+                  onChange={e => setScheduledTime(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring appearance-none"
+                >
+                  <option value="">Выберите</option>
+                  {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Comment */}
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Комментарий</label>
             <div className="relative">
