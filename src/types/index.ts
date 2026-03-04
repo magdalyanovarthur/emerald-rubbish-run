@@ -20,6 +20,9 @@ export interface Order {
   street: string;
   house: string;
   apartment: string;
+  entrance: string;
+  scheduledDate: string;
+  scheduledTime: string;
   comment: string;
   status: OrderStatus;
   createdAt: string;

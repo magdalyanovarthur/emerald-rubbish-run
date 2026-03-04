@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { STATUS_LABELS, STATUS_COLORS } from '@/types';
-import { ArrowLeft, MapPin, Clock, User, MessageCircle, X, Check, Truck } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, User, MessageCircle, X, Check, Truck, CalendarIcon } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -73,12 +73,18 @@ const OrderDetails: React.FC = () => {
       <div className="glass-card rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-primary" />
-          <p className="text-sm font-medium text-foreground">{order.street}, д. {order.house}, кв. {order.apartment}</p>
+          <p className="text-sm font-medium text-foreground">{order.street}, д. {order.house}, кв. {order.apartment}, п. {order.entrance}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">
+            Запланировано: {order.scheduledDate ? new Date(order.scheduledDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '—'} в {order.scheduledTime || '—'}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-muted-foreground" />
           <p className="text-xs text-muted-foreground">
-            {new Date(order.createdAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+            Создан: {new Date(order.createdAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
         <div className="flex items-center gap-2">

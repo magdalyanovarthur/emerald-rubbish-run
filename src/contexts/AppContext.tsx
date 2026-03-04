@@ -22,9 +22,9 @@ export const useApp = () => useContext(AppContext);
 
 // Demo data
 const DEMO_ORDERS: Order[] = [
-  { id: '1', clientId: 'c1', clientName: 'Иван Петров', street: '5-я просека', house: '12', apartment: '45, подъезд 2', comment: 'Два мешка мусора у двери', status: 'searching', createdAt: '2026-03-04T10:30:00', lat: 53.2200, lng: 50.1900 },
-  { id: '2', clientId: 'c1', clientName: 'Иван Петров', courierId: 'k1', courierName: 'Алексей', street: 'Улица Советской Армии', house: '5', apartment: '12', comment: '', status: 'on_the_way', createdAt: '2026-03-04T09:00:00', lat: 53.2100, lng: 50.1400 },
-  { id: '3', clientId: 'c2', clientName: 'Мария С.', street: '6-я просека', house: '8', apartment: '3', comment: 'Крупногабаритный мусор', status: 'searching', createdAt: '2026-03-04T11:00:00', lat: 53.2220, lng: 50.1950 },
+  { id: '1', clientId: 'c1', clientName: 'Иван Петров', street: '5-я просека', house: '12', apartment: '45', entrance: '2', scheduledDate: '2026-03-04', scheduledTime: '14:00', comment: 'Два мешка мусора у двери', status: 'searching', createdAt: '2026-03-04T10:30:00', lat: 53.2200, lng: 50.1900 },
+  { id: '2', clientId: 'c1', clientName: 'Иван Петров', courierId: 'k1', courierName: 'Алексей', street: 'Улица Советской Армии', house: '5', apartment: '12', entrance: '1', scheduledDate: '2026-03-04', scheduledTime: '10:00', comment: '', status: 'on_the_way', createdAt: '2026-03-04T09:00:00', lat: 53.2100, lng: 50.1400 },
+  { id: '3', clientId: 'c2', clientName: 'Мария С.', street: '6-я просека', house: '8', apartment: '3', entrance: '3', scheduledDate: '2026-03-05', scheduledTime: '09:30', comment: 'Крупногабаритный мусор', status: 'searching', createdAt: '2026-03-04T11:00:00', lat: 53.2220, lng: 50.1950 },
 ];
 
 const DEMO_USERS: (User & { password: string })[] = [
