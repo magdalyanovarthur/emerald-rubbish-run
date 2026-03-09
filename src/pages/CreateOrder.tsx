@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { STREETS, STREET_COORDS } from '@/types';
+import { STREETS, STREET_COORDS, STREET_HOUSES } from '@/types';
 import { MapPin, Home, DoorOpen, MessageSquare, Send, CalendarIcon, Clock, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -20,6 +20,13 @@ const CreateOrder: React.FC = () => {
   const navigate = useNavigate();
   const [street, setStreet] = useState('');
   const [house, setHouse] = useState('');
+
+  const availableHouses = street ? (STREET_HOUSES[street] || []) : [];
+
+  const handleStreetChange = (value: string) => {
+    setStreet(value);
+    setHouse('');
+  };
   const [apartment, setApartment] = useState('');
   const [entrance, setEntrance] = useState('');
   const [scheduledDate, setScheduledDate] = useState<Date>();
@@ -67,7 +74,7 @@ const CreateOrder: React.FC = () => {
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <select
                 value={street}
-                onChange={e => setStreet(e.target.value)}
+                onChange={e => handleStreetChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring appearance-none"
               >
                 <option value="">Выберите улицу</option>
@@ -81,13 +88,15 @@ const CreateOrder: React.FC = () => {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Дом *</label>
             <div className="relative">
               <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="12"
+              <select
                 value={house}
                 onChange={e => setHouse(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
+                disabled={!street}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring appearance-none disabled:opacity-50"
+              >
+                <option value="">{street ? 'Выберите дом' : 'Сначала выберите улицу'}</option>
+                {availableHouses.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
             </div>
           </div>
 
