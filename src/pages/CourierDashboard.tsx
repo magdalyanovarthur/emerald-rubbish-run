@@ -3,6 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { STATUS_LABELS, STATUS_COLORS } from '@/types';
 import { Package, MapPin, Clock, Check } from 'lucide-react';
+import OrdersMap from '@/components/OrdersMap';
 
 const CourierDashboard: React.FC = () => {
   const { user, orders, updateOrderStatus } = useApp();
@@ -46,6 +47,10 @@ const CourierDashboard: React.FC = () => {
           Мои заказы ({myOrders.length})
         </button>
       </div>
+
+      {list.length > 0 && (
+        <OrdersMap orders={list} onOrderClick={(id) => navigate(`/order/${id}`)} />
+      )}
 
       {list.length === 0 && (
         <div className="glass-card rounded-2xl p-8 text-center">
