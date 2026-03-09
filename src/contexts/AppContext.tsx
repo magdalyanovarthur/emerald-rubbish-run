@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { User, Order, ChatMessage, Chat, OrderStatus, UserRole } from '@/types';
+import { User, Order, ChatMessage, Chat, OrderStatus, UserRole, Subscription, SubscriptionType } from '@/types';
 
 interface AppContextType {
   user: User | null;
@@ -9,22 +9,24 @@ interface AppContextType {
   orders: Order[];
   addOrder: (order: Omit<Order, 'id' | 'clientId' | 'clientName' | 'status' | 'createdAt'>) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus, courierId?: string) => void;
+  payForOrder: (orderId: string) => void;
   chats: Chat[];
   messages: ChatMessage[];
   sendMessage: (orderId: string, text: string) => void;
   getChat: (orderId: string) => Chat | undefined;
   getOrderMessages: (orderId: string) => ChatMessage[];
   updateProfile: (data: Partial<User>) => void;
+  subscription: Subscription | null;
+  purchaseSubscription: (type: SubscriptionType) => void;
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
 export const useApp = () => useContext(AppContext);
 
-// Demo data
 const DEMO_ORDERS: Order[] = [
-  { id: '1', clientId: 'c1', clientName: 'Иван Петров', street: '5-я просека', house: '12', apartment: '45', entrance: '2', scheduledDate: '2026-03-04', scheduledTime: '14:00', comment: 'Два мешка мусора у двери', status: 'searching', createdAt: '2026-03-04T10:30:00', lat: 53.2200, lng: 50.1900 },
-  { id: '2', clientId: 'c1', clientName: 'Иван Петров', courierId: 'k1', courierName: 'Алексей', street: 'Улица Советской Армии', house: '5', apartment: '12', entrance: '1', scheduledDate: '2026-03-04', scheduledTime: '10:00', comment: '', status: 'on_the_way', createdAt: '2026-03-04T09:00:00', lat: 53.2100, lng: 50.1400 },
-  { id: '3', clientId: 'c2', clientName: 'Мария С.', street: '6-я просека', house: '8', apartment: '3', entrance: '3', scheduledDate: '2026-03-05', scheduledTime: '09:30', comment: 'Крупногабаритный мусор', status: 'searching', createdAt: '2026-03-04T11:00:00', lat: 53.2220, lng: 50.1950 },
+  { id: '1', clientId: 'c1', clientName: 'Иван Петров', street: '5-я просека', house: '12', apartment: '45', entrance: '2', scheduledDate: '2026-03-04', scheduledTime: '14:00', comment: 'Два мешка мусора у двери', status: 'searching', createdAt: '2026-03-04T10:30:00', lat: 53.2200, lng: 50.1900, paid: true },
+  { id: '2', clientId: 'c1', clientName: 'Иван Петров', courierId: 'k1', courierName: 'Алексей', street: 'Улица Советской Армии', house: '5', apartment: '12', entrance: '1', scheduledDate: '2026-03-04', scheduledTime: '10:00', comment: '', status: 'on_the_way', createdAt: '2026-03-04T09:00:00', lat: 53.2100, lng: 50.1400, paid: true },
+  { id: '3', clientId: 'c2', clientName: 'Мария С.', street: '6-я просека', house: '8', apartment: '3', entrance: '3', scheduledDate: '2026-03-05', scheduledTime: '09:30', comment: 'Крупногабаритный мусор', status: 'searching', createdAt: '2026-03-04T11:00:00', lat: 53.2220, lng: 50.1950, paid: true },
 ];
 
 const DEMO_USERS: (User & { password: string })[] = [
@@ -48,6 +50,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     { id: 'm2', orderId: '2', senderId: 'c1', senderName: 'Иван', text: 'Спасибо, жду!', timestamp: '2026-03-04T09:12:00' },
     { id: 'm3', orderId: '2', senderId: 'k1', senderName: 'Алексей', text: 'Уже еду!', timestamp: '2026-03-04T09:15:00' },
   ]);
+  const [subscription, setSubscription] = useState<Subscription | null>(() => {
+    const saved = localStorage.getItem('cv-subscription');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   const login = useCallback((email: string, password: string) => {
     const found = users.find(u => u.email === email && u.password === password);
@@ -82,11 +88,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `o${Date.now()}`,
       clientId: user.id,
       clientName: user.name,
-      status: 'searching',
+      status: orderData.paid ? 'searching' : 'searching',
       createdAt: new Date().toISOString(),
     };
     setOrders(prev => [newOrder, ...prev]);
   }, [user]);
+
+  const payForOrder = useCallback((orderId: string) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      return { ...o, paid: true };
+    }));
+  }, []);
 
   const updateOrderStatus = useCallback((orderId: string, status: OrderStatus, courierId?: string) => {
     setOrders(prev => prev.map(o => {
@@ -131,8 +144,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('cv-user', JSON.stringify(updated));
   }, [user]);
 
+  const purchaseSubscription = useCallback((type: SubscriptionType) => {
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 1);
+    const sub: Subscription = {
+      type,
+      startDate: now.toISOString(),
+      endDate: endDate.toISOString(),
+    };
+    setSubscription(sub);
+    localStorage.setItem('cv-subscription', JSON.stringify(sub));
+  }, []);
+
   return (
-    <AppContext.Provider value={{ user, login, register, logout, orders, addOrder, updateOrderStatus, chats, messages, sendMessage, getChat, getOrderMessages, updateProfile }}>
+    <AppContext.Provider value={{ user, login, register, logout, orders, addOrder, updateOrderStatus, payForOrder, chats, messages, sendMessage, getChat, getOrderMessages, updateProfile, subscription, purchaseSubscription }}>
       {children}
     </AppContext.Provider>
   );

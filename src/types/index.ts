@@ -10,6 +10,13 @@ export interface User {
 }
 
 export type OrderStatus = 'searching' | 'on_the_way' | 'completed' | 'cancelled';
+export type SubscriptionType = 'none' | 'every_other_day' | 'every_day';
+
+export interface Subscription {
+  type: SubscriptionType;
+  startDate: string;
+  endDate: string;
+}
 
 export interface Order {
   id: string;
@@ -28,6 +35,7 @@ export interface Order {
   createdAt: string;
   lat: number;
   lng: number;
+  paid: boolean;
 }
 
 export interface ChatMessage {

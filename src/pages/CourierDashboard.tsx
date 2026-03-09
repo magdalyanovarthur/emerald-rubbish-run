@@ -10,7 +10,7 @@ const CourierDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState<'available' | 'my'>('available');
 
-  const available = orders.filter(o => o.status === 'searching');
+  const available = orders.filter(o => o.status === 'searching' && o.paid);
   const myOrders = orders.filter(o => o.courierId === user?.id);
 
   const handleTake = (orderId: string, e: React.MouseEvent) => {
