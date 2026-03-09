@@ -27,7 +27,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 const DashboardRouter: React.FC = () => {
-  const { user } = useApp();
+  const { user, loading } = useApp();
+  if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'courier') return <CourierDashboard />;
   if (user.role === 'admin') return <AdminPanel />;
