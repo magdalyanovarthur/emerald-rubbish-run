@@ -132,16 +132,6 @@ const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {isLogin && (
-            <div className="mt-4 p-3 rounded-xl bg-secondary/50">
-              <p className="text-[10px] text-muted-foreground text-center mb-1">Демо-аккаунты:</p>
-              <div className="space-y-0.5 text-[10px] text-muted-foreground text-center">
-                <p>Клиент: client@test.ru / 123456</p>
-                <p>Курьер: courier@test.ru / 123456</p>
-                <p>Админ: admin@test.ru / admin123</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
