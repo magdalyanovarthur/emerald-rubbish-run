@@ -38,10 +38,8 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm animate-slide-up">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-lg shadow-primary/30">
-            <Trash2 className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">ЧИСТО-ВЫНОС</h1>
+          <img src={logo} alt="ЧистоВынос" className="w-28 h-28 mb-4 drop-shadow-lg" />
+          <h1 className="text-2xl font-bold text-foreground">ЧистоВынос</h1>
           <p className="text-sm text-muted-foreground">Самара</p>
         </div>
 
