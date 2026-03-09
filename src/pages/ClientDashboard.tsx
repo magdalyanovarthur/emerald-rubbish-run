@@ -3,6 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { STATUS_LABELS, STATUS_COLORS } from '@/types';
 import { Package, Clock, MapPin } from 'lucide-react';
+import OrdersMap from '@/components/OrdersMap';
 
 const ClientDashboard: React.FC = () => {
   const { user, orders } = useApp();
@@ -46,6 +47,10 @@ const ClientDashboard: React.FC = () => {
         <h2 className="text-lg font-bold text-foreground mb-1">Привет, {user?.name?.split(' ')[0]} 👋</h2>
         <p className="text-sm text-muted-foreground">Ваши заказы на вынос мусора</p>
       </div>
+
+      {myOrders.length > 0 && (
+        <OrdersMap orders={myOrders} onOrderClick={(id) => navigate(`/order/${id}`)} />
+      )}
 
       {active.length > 0 && (
         <section>
