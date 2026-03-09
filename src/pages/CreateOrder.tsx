@@ -20,6 +20,13 @@ const CreateOrder: React.FC = () => {
   const navigate = useNavigate();
   const [street, setStreet] = useState('');
   const [house, setHouse] = useState('');
+
+  const availableHouses = street ? (STREET_HOUSES[street] || []) : [];
+
+  const handleStreetChange = (value: string) => {
+    setStreet(value);
+    setHouse('');
+  };
   const [apartment, setApartment] = useState('');
   const [entrance, setEntrance] = useState('');
   const [scheduledDate, setScheduledDate] = useState<Date>();
