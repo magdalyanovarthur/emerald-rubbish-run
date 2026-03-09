@@ -1,11 +1,15 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { User, Order, ChatMessage, Chat, OrderStatus, UserRole, Subscription, SubscriptionType } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { Session } from '@supabase/supabase-js';
 
 interface AppContextType {
   user: User | null;
-  login: (email: string, password: string) => boolean;
-  register: (name: string, email: string, phone: string, role: UserRole, password: string) => boolean;
-  logout: () => void;
+  session: Session | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, phone: string, role: UserRole, password: string) => Promise<{ success: boolean; error?: string; needsConfirmation?: boolean }>;
+  logout: () => Promise<void>;
   orders: Order[];
   addOrder: (order: Omit<Order, 'id' | 'clientId' | 'clientName' | 'status' | 'createdAt'>) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus, courierId?: string) => void;
@@ -29,18 +33,10 @@ const DEMO_ORDERS: Order[] = [
   { id: '3', clientId: 'c2', clientName: 'Мария С.', street: '6-я просека', house: '8', apartment: '3', entrance: '3', scheduledDate: '2026-03-05', scheduledTime: '09:30', comment: 'Крупногабаритный мусор', status: 'searching', createdAt: '2026-03-04T11:00:00', lat: 53.2220, lng: 50.1950, paid: true },
 ];
 
-const DEMO_USERS: (User & { password: string })[] = [
-  { id: 'c1', name: 'Иван Петров', phone: '+7 927 111 22 33', email: 'client@test.ru', role: 'client', password: '123456', address: '5-я просека, д.12, кв.45' },
-  { id: 'k1', name: 'Алексей Курьер', phone: '+7 927 444 55 66', email: 'courier@test.ru', role: 'courier', password: '123456', address: '' },
-  { id: 'a1', name: 'Администратор', phone: '+7 927 000 00 00', email: 'admin@test.ru', role: 'admin', password: 'admin123', address: '' },
-];
-
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState(DEMO_USERS);
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('cv-user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>(DEMO_ORDERS);
   const [chats, setChats] = useState<Chat[]>([
     { orderId: '2', participants: ['c1', 'k1'], lastMessage: 'Уже еду!', lastMessageTime: '2026-03-04T09:15:00' },
@@ -55,30 +51,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : null;
   });
 
-  const login = useCallback((email: string, password: string) => {
-    const found = users.find(u => u.email === email && u.password === password);
-    if (found) {
-      const { password: _, ...userData } = found;
-      setUser(userData);
-      localStorage.setItem('cv-user', JSON.stringify(userData));
-      return true;
+  const fetchProfile = useCallback(async (userId: string, email: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (data) {
+      setUser({
+        id: userId,
+        name: data.name || '',
+        phone: data.phone || '',
+        email,
+        role: data.role as UserRole,
+        address: data.address || '',
+        avatarUrl: data.avatar_url || '',
+        profileStreet: data.profile_street || '',
+        profileHouse: data.profile_house || '',
+        profileEntrance: data.profile_entrance || '',
+        profileFloor: data.profile_floor || '',
+        profileApartment: data.profile_apartment || '',
+      });
     }
-    return false;
-  }, [users]);
+  }, []);
 
-  const register = useCallback((name: string, email: string, phone: string, role: UserRole, password: string) => {
-    if (users.find(u => u.email === email)) return false;
-    const newUser = { id: `u${Date.now()}`, name, email, phone, role, password, address: '' };
-    setUsers(prev => [...prev, newUser]);
-    const { password: _, ...userData } = newUser;
-    setUser(userData);
-    localStorage.setItem('cv-user', JSON.stringify(userData));
-    return true;
-  }, [users]);
+  useEffect(() => {
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        setSession(newSession);
+        if (newSession?.user) {
+          await fetchProfile(newSession.user.id, newSession.user.email || '');
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
 
-  const logout = useCallback(() => {
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      if (currentSession?.user) {
+        fetchProfile(currentSession.user.id, currentSession.user.email || '');
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => authSub.unsubscribe();
+  }, [fetchProfile]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (error.message.includes('Email not confirmed')) {
+        return { success: false, error: 'Подтвердите email перед входом. Проверьте почту.' };
+      }
+      return { success: false, error: 'Неверный email или пароль' };
+    }
+    return { success: true };
+  }, []);
+
+  const register = useCallback(async (name: string, email: string, phone: string, role: UserRole, password: string) => {
+    const { error, data } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: { name, phone, role },
+      },
+    });
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    // If email confirmation is required, user won't have a session yet
+    if (data.user && !data.session) {
+      return { success: true, needsConfirmation: true };
+    }
+    return { success: true };
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('cv-user');
+    setSession(null);
   }, []);
 
   const addOrder = useCallback((orderData: Omit<Order, 'id' | 'clientId' | 'clientName' | 'status' | 'createdAt'>) => {
@@ -88,47 +144,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `o${Date.now()}`,
       clientId: user.id,
       clientName: user.name,
-      status: orderData.paid ? 'searching' : 'searching',
+      status: 'searching',
       createdAt: new Date().toISOString(),
     };
     setOrders(prev => [newOrder, ...prev]);
   }, [user]);
 
   const payForOrder = useCallback((orderId: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      return { ...o, paid: true };
-    }));
+    setOrders(prev => prev.map(o => o.id !== orderId ? o : { ...o, paid: true }));
   }, []);
 
   const updateOrderStatus = useCallback((orderId: string, status: OrderStatus, courierId?: string) => {
     setOrders(prev => prev.map(o => {
       if (o.id !== orderId) return o;
-      return {
-        ...o,
-        status,
-        courierId: courierId || o.courierId,
-        courierName: courierId ? user?.name : o.courierName,
-      };
+      return { ...o, status, courierId: courierId || o.courierId, courierName: courierId ? user?.name : o.courierName };
     }));
   }, [user]);
 
   const sendMessage = useCallback((orderId: string, text: string) => {
     if (!user) return;
-    const msg: ChatMessage = {
-      id: `m${Date.now()}`,
-      orderId,
-      senderId: user.id,
-      senderName: user.name,
-      text,
-      timestamp: new Date().toISOString(),
-    };
+    const msg: ChatMessage = { id: `m${Date.now()}`, orderId, senderId: user.id, senderName: user.name, text, timestamp: new Date().toISOString() };
     setMessages(prev => [...prev, msg]);
     setChats(prev => {
       const existing = prev.find(c => c.orderId === orderId);
-      if (existing) {
-        return prev.map(c => c.orderId === orderId ? { ...c, lastMessage: text, lastMessageTime: msg.timestamp } : c);
-      }
+      if (existing) return prev.map(c => c.orderId === orderId ? { ...c, lastMessage: text, lastMessageTime: msg.timestamp } : c);
       const order = orders.find(o => o.id === orderId);
       return [...prev, { orderId, participants: [order?.clientId || '', order?.courierId || ''], lastMessage: text, lastMessageTime: msg.timestamp }];
     });
@@ -137,28 +176,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getChat = useCallback((orderId: string) => chats.find(c => c.orderId === orderId), [chats]);
   const getOrderMessages = useCallback((orderId: string) => messages.filter(m => m.orderId === orderId), [messages]);
 
-  const updateProfile = useCallback((data: Partial<User>) => {
+  const updateProfile = useCallback(async (data: Partial<User>) => {
     if (!user) return;
     const updated = { ...user, ...data };
     setUser(updated);
-    localStorage.setItem('cv-user', JSON.stringify(updated));
+    
+    await supabase.from('profiles').update({
+      name: updated.name,
+      phone: updated.phone,
+      address: updated.address,
+      avatar_url: updated.avatarUrl,
+      profile_street: updated.profileStreet,
+      profile_house: updated.profileHouse,
+      profile_entrance: updated.profileEntrance,
+      profile_floor: updated.profileFloor,
+      profile_apartment: updated.profileApartment,
+    }).eq('user_id', user.id);
   }, [user]);
 
   const purchaseSubscription = useCallback((type: SubscriptionType) => {
     const now = new Date();
     const endDate = new Date(now);
     endDate.setMonth(endDate.getMonth() + 1);
-    const sub: Subscription = {
-      type,
-      startDate: now.toISOString(),
-      endDate: endDate.toISOString(),
-    };
+    const sub: Subscription = { type, startDate: now.toISOString(), endDate: endDate.toISOString() };
     setSubscription(sub);
     localStorage.setItem('cv-subscription', JSON.stringify(sub));
   }, []);
 
   return (
-    <AppContext.Provider value={{ user, login, register, logout, orders, addOrder, updateOrderStatus, payForOrder, chats, messages, sendMessage, getChat, getOrderMessages, updateProfile, subscription, purchaseSubscription }}>
+    <AppContext.Provider value={{ user, session, loading, login, register, logout, orders, addOrder, updateOrderStatus, payForOrder, chats, messages, sendMessage, getChat, getOrderMessages, updateProfile, subscription, purchaseSubscription }}>
       {children}
     </AppContext.Provider>
   );
