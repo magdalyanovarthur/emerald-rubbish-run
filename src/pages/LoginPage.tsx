@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/types';
-import { Trash2, Mail, Lock, User, Phone } from 'lucide-react';
+import { Mail, Lock, User, Phone } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 const LoginPage: React.FC = () => {
   const { login, register } = useApp();
