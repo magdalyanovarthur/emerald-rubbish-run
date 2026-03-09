@@ -9,13 +9,10 @@ import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const TIMES = Array.from({ length: 28 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 7;
-  const min = i % 2 === 0 ? '00' : '30';
-  return `${hour.toString().padStart(2, '0')}:${min}`;
-}).filter((_, i) => {
-  const hour = Math.floor(i / 2) + 7;
-  return hour <= 21;
+const TIMES = Array.from({ length: 6 }, (_, i) => {
+  const startHour = 9 + i * 2;
+  const endHour = startHour + 2;
+  return `${startHour.toString().padStart(2, '0')}:00 – ${endHour.toString().padStart(2, '0')}:00`;
 });
 
 const CreateOrder: React.FC = () => {
