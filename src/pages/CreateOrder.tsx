@@ -22,6 +22,7 @@ const CreateOrder: React.FC = () => {
   const [house, setHouse] = useState('');
 
   const availableHouses = street ? (STREET_HOUSES[street] || []) : [];
+  const isHouseValid = house.trim() !== '' && availableHouses.map(h => h.toLowerCase()).includes(house.trim().toLowerCase());
 
   const handleStreetChange = (value: string) => {
     setStreet(value);
@@ -38,7 +39,7 @@ const CreateOrder: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!street || !house || !apartment || !entrance || !scheduledDate || !scheduledTime) {
+    if (!street || !isHouseValid || !apartment || !entrance || !scheduledDate || !scheduledTime) {
       setError('Заполните обязательные поля');
       return;
     }
@@ -88,16 +89,23 @@ const CreateOrder: React.FC = () => {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Дом *</label>
             <div className="relative">
               <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <select
+              <input
+                type="text"
+                placeholder={street ? 'Введите номер дома' : 'Сначала выберите улицу'}
                 value={house}
                 onChange={e => setHouse(e.target.value)}
                 disabled={!street}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring appearance-none disabled:opacity-50"
-              >
-                <option value="">{street ? 'Выберите дом' : 'Сначала выберите улицу'}</option>
-                {availableHouses.map(h => <option key={h} value={h}>{h}</option>)}
-              </select>
+                className={cn(
+                  "w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-50",
+                  house && !isHouseValid
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-secondary text-foreground"
+                )}
+              />
             </div>
+            {house && !isHouseValid && (
+              <p className="text-xs text-destructive mt-1">Этот дом не входит в зону обслуживания</p>
+            )}
           </div>
 
           {/* Apartment & Entrance */}
