@@ -114,14 +114,6 @@ const OrderDetails: React.FC = () => {
           </button>
         )}
 
-        {isClient && (order.status === 'searching' || order.status === 'on_the_way') && (
-          <button
-            onClick={() => updateOrderStatus(order.id, 'cancelled')}
-            className="w-full py-3 rounded-2xl bg-destructive text-destructive-foreground text-sm font-medium flex items-center justify-center gap-2"
-          >
-            <X className="w-4 h-4" /> Отменить заказ
-          </button>
-        )}
 
         {isCourier && order.status === 'searching' && (
           <button
