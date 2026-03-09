@@ -20,13 +20,15 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useApp();
+  const { user, loading } = useApp();
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Загрузка...</p></div>;
   if (!user) return <Navigate to="/login" replace />;
   return <MobileLayout>{children}</MobileLayout>;
 };
 
 const DashboardRouter: React.FC = () => {
-  const { user } = useApp();
+  const { user, loading } = useApp();
+  if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'courier') return <CourierDashboard />;
   if (user.role === 'admin') return <AdminPanel />;

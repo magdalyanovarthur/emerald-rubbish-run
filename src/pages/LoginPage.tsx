@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/types';
-import { Mail, Lock, User, Phone } from 'lucide-react';
+import { Mail, Lock, User, Phone, CheckCircle } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 const LoginPage: React.FC = () => {
@@ -15,24 +15,71 @@ const LoginPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('client');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (isLogin) {
-      const success = login(email, password);
-      if (success) navigate('/');
-      else setError('Неверный email или пароль');
-    } else {
-      if (!name || !email || !phone || !password) {
-        setError('Заполните все поля');
-        return;
+    setIsLoading(true);
+
+    try {
+      if (isLogin) {
+        const result = await login(email, password);
+        if (result.success) navigate('/');
+        else setError(result.error || 'Ошибка входа');
+      } else {
+        if (!name || !email || !phone || !password) {
+          setError('Заполните все поля');
+          setIsLoading(false);
+          return;
+        }
+        const result = await register(name, email, phone, role, password);
+        if (result.success && result.needsConfirmation) {
+          setShowConfirmation(true);
+        } else if (result.success) {
+          navigate('/');
+        } else {
+          setError(result.error || 'Ошибка регистрации');
+        }
       }
-      const success = register(name, email, phone, role, password);
-      if (success) navigate('/');
-      else setError('Пользователь с таким email уже существует');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-sm animate-slide-up">
+          <div className="flex flex-col items-center mb-8">
+            <img src={logo} alt="ЧистоВынос" className="w-28 h-28 mb-4 drop-shadow-lg" />
+            <h1 className="text-2xl font-bold text-foreground">ЧистоВынос</h1>
+          </div>
+          <div className="glass-card rounded-2xl p-6 text-center">
+            <CheckCircle className="w-16 h-16 text-primary mx-auto mb-4" />
+            <h2 className="text-lg font-bold text-foreground mb-2">Подтвердите email</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Мы отправили письмо на <span className="font-semibold text-foreground">{email}</span>. 
+              Перейдите по ссылке в письме, чтобы активировать аккаунт.
+            </p>
+            <p className="text-xs text-muted-foreground mb-6">
+              Не получили письмо? Проверьте папку «Спам».
+            </p>
+            <button
+              onClick={() => {
+                setShowConfirmation(false);
+                setIsLogin(true);
+              }}
+              className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20 transition-transform active:scale-[0.98]"
+            >
+              Перейти ко входу
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -125,12 +172,12 @@ const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20 transition-transform active:scale-[0.98]"
+              disabled={isLoading}
+              className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20 transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              {isLogin ? 'Войти' : 'Зарегистрироваться'}
+              {isLoading ? 'Загрузка...' : isLogin ? 'Войти' : 'Зарегистрироваться'}
             </button>
           </form>
-
         </div>
       </div>
     </div>
