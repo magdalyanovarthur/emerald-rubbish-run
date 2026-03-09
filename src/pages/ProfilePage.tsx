@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { User, Phone, Mail, MapPin, LogOut, Save, Shield } from 'lucide-react';
+import { User, Phone, MapPin, LogOut, Save, Shield, Camera, Building, DoorOpen, Layers } from 'lucide-react';
+import { STREETS, STREET_HOUSES } from '@/types';
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile, logout } = useApp();
@@ -9,10 +10,37 @@ const ProfilePage: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [address, setAddress] = useState(user?.address || '');
+  const [profileStreet, setProfileStreet] = useState(user?.profileStreet || '');
+  const [profileHouse, setProfileHouse] = useState(user?.profileHouse || '');
+  const [profileEntrance, setProfileEntrance] = useState(user?.profileEntrance || '');
+  const [profileFloor, setProfileFloor] = useState(user?.profileFloor || '');
+  const [profileApartment, setProfileApartment] = useState(user?.profileApartment || '');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSave = () => {
-    updateProfile({ name, phone, address });
+    updateProfile({
+      name,
+      phone,
+      profileStreet,
+      profileHouse,
+      profileEntrance,
+      profileFloor,
+      profileApartment,
+      avatarUrl: avatarPreview || undefined,
+      address: profileStreet ? `${profileStreet}, д.${profileHouse}, подъезд ${profileEntrance}, эт.${profileFloor}, кв.${profileApartment}` : '',
+    });
     setEditing(false);
   };
 
@@ -21,6 +49,8 @@ const ProfilePage: React.FC = () => {
     navigate('/login');
   };
 
+  const availableHouses = profileStreet ? (STREET_HOUSES[profileStreet] || []) : [];
+
   const roleLabels = { client: 'Клиент', courier: 'Курьер', admin: 'Администратор' };
 
   return (
@@ -28,9 +58,31 @@ const ProfilePage: React.FC = () => {
       <h2 className="text-lg font-bold text-foreground">Профиль</h2>
 
       <div className="glass-card rounded-2xl p-6">
+        {/* Avatar + Name */}
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
-            <User className="w-7 h-7 text-primary" />
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center overflow-hidden">
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-8 h-8 text-primary" />
+              )}
+            </div>
+            {editing && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
           </div>
           <div>
             <p className="text-base font-bold text-foreground">{user?.name}</p>
@@ -42,6 +94,7 @@ const ProfilePage: React.FC = () => {
         </div>
 
         <div className="space-y-3">
+          {/* Имя */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Имя</label>
             {editing ? (
@@ -54,6 +107,7 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
 
+          {/* Телефон */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Телефон</label>
             {editing ? (
@@ -66,18 +120,54 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
 
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Email</label>
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary">
-              <Mail className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-foreground">{user?.email}</span>
-            </div>
-          </div>
-
+          {/* Адрес */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Адрес</label>
             {editing ? (
-              <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Ваш адрес" className="w-full px-4 py-2.5 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground text-sm outline-none focus:ring-2 focus:ring-ring" />
+              <div className="space-y-2">
+                <select
+                  value={profileStreet}
+                  onChange={e => { setProfileStreet(e.target.value); setProfileHouse(''); }}
+                  className="w-full px-4 py-2.5 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Выберите улицу</option>
+                  {STREETS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-0.5 block">Дом</label>
+                    <input
+                      value={profileHouse}
+                      onChange={e => setProfileHouse(e.target.value)}
+                      placeholder="Номер дома"
+                      className={`w-full px-3 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-ring ${
+                        profileHouse && !availableHouses.map(h => h.toLowerCase()).includes(profileHouse.trim().toLowerCase())
+                          ? 'bg-muted text-muted-foreground'
+                          : 'bg-secondary text-foreground'
+                      }`}
+                    />
+                    {profileHouse && !availableHouses.map(h => h.toLowerCase()).includes(profileHouse.trim().toLowerCase()) && (
+                      <p className="text-[10px] text-destructive mt-0.5">Дом не в зоне обслуживания</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-0.5 block">Подъезд</label>
+                    <input value={profileEntrance} onChange={e => setProfileEntrance(e.target.value)} placeholder="Подъезд" className="w-full px-3 py-2 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-0.5 block">Этаж</label>
+                    <input value={profileFloor} onChange={e => setProfileFloor(e.target.value)} placeholder="Этаж" className="w-full px-3 py-2 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-0.5 block">Квартира</label>
+                    <input value={profileApartment} onChange={e => setProfileApartment(e.target.value)} placeholder="Квартира" className="w-full px-3 py-2 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary">
                 <MapPin className="w-4 h-4 text-muted-foreground" />

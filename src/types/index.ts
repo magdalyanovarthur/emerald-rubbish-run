@@ -7,6 +7,12 @@ export interface User {
   email: string;
   role: UserRole;
   address?: string;
+  avatarUrl?: string;
+  profileStreet?: string;
+  profileHouse?: string;
+  profileEntrance?: string;
+  profileFloor?: string;
+  profileApartment?: string;
 }
 
 export type OrderStatus = 'searching' | 'on_the_way' | 'completed' | 'cancelled';
