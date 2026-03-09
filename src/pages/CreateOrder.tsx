@@ -19,7 +19,7 @@ const TIMES = Array.from({ length: 28 }, (_, i) => {
 });
 
 const CreateOrder: React.FC = () => {
-  const { addOrder } = useApp();
+  const { addOrder, subscription } = useApp();
   const navigate = useNavigate();
   const [street, setStreet] = useState('');
   const [house, setHouse] = useState('');
@@ -29,6 +29,8 @@ const CreateOrder: React.FC = () => {
   const [scheduledTime, setScheduledTime] = useState('');
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
+
+  const hasActiveSubscription = subscription && new Date(subscription.endDate) > new Date();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +49,7 @@ const CreateOrder: React.FC = () => {
       comment,
       lat: coords.lat + (Math.random() - 0.5) * 0.005,
       lng: coords.lng + (Math.random() - 0.5) * 0.005,
+      paid: !!hasActiveSubscription,
     });
     navigate('/');
   };
