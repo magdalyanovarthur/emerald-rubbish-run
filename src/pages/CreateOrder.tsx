@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { STREETS, STREET_COORDS } from '@/types';
+import { STREETS, STREET_COORDS, STREET_HOUSES } from '@/types';
 import { MapPin, Home, DoorOpen, MessageSquare, Send, CalendarIcon, Clock, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
