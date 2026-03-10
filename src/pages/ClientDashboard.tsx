@@ -1,17 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { STATUS_LABELS, STATUS_COLORS } from '@/types';
 import { Package, Clock, MapPin, CreditCard, Crown, CalendarCheck, Repeat, Check, X, Loader2 } from 'lucide-react';
 import OrdersMap from '@/components/OrdersMap';
 import { usePayment } from '@/hooks/usePayment';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { SubscriptionType } from '@/types';
 
 const ClientDashboard: React.FC = () => {
   const { user, orders, subscription, purchaseSubscription, payForOrder } = useApp();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { createPayment, isProcessing } = usePayment();
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [subModal, setSubModal] = useState<'every_other_day' | 'every_day' | null>(null);
+
+  // Handle return from YooKassa
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus !== 'success' || !user) return;
+
+    // Remove query param
+    searchParams.delete('payment');
+    setSearchParams(searchParams, { replace: true });
+
+    // Check recent succeeded payments and apply them
+    const applyPayment = async () => {
+      const { data: recentPayments } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'succeeded')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!recentPayments || recentPayments.length === 0) {
+        // Payment may still be processing, poll once after delay
+        setTimeout(async () => {
+          const { data: delayed } = await supabase
+            .from('payments')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('status', 'succeeded')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (delayed && delayed.length > 0) {
+            processPayment(delayed[0]);
+          } else {
+            toast({ title: 'Оплата обрабатывается', description: 'Статус обновится автоматически через несколько минут' });
+          }
+        }, 5000);
+        return;
+      }
+
+      processPayment(recentPayments[0]);
+    };
+
+    const processPayment = (payment: any) => {
+      if (payment.payment_type === 'order' && payment.order_id) {
+        payForOrder(payment.order_id);
+        toast({ title: '✅ Оплата прошла!', description: `Заказ #${payment.order_id} оплачен` });
+      } else if (payment.payment_type === 'subscription' && payment.subscription_type) {
+        purchaseSubscription(payment.subscription_type as SubscriptionType);
+        toast({ title: '✅ Подписка оформлена!', description: 'Подписка активирована на 30 дней' });
+      }
+    };
+
+    applyPayment();
+  }, [searchParams, user]);
 
   const myOrders = orders.filter(o => o.clientId === user?.id);
   const active = myOrders.filter(o => (o.status === 'searching' || o.status === 'on_the_way'));
