@@ -106,6 +106,74 @@ const LoginPage: React.FC = () => {
     );
   }
 
+  if (showForgotPassword) {
+    if (resetEmailSent) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center px-4">
+          <div className="w-full max-w-sm animate-slide-up">
+            <div className="flex flex-col items-center mb-8">
+              <img src={logo} alt="ЧистоВынос" className="w-28 h-28 mb-4 drop-shadow-lg" />
+            </div>
+            <div className="glass-card rounded-2xl p-6 text-center">
+              <CheckCircle className="w-16 h-16 text-primary mx-auto mb-4" />
+              <h2 className="text-lg font-bold text-foreground mb-2">Письмо отправлено</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Мы отправили ссылку для сброса пароля на <span className="font-semibold text-foreground">{email}</span>.
+              </p>
+              <p className="text-xs text-muted-foreground mb-6">Проверьте папку «Спам», если не нашли письмо.</p>
+              <button
+                onClick={() => { setShowForgotPassword(false); setResetEmailSent(false); setIsLogin(true); }}
+                className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20 transition-transform active:scale-[0.98]"
+              >
+                Перейти ко входу
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-sm animate-slide-up">
+          <div className="flex flex-col items-center mb-8">
+            <img src={logo} alt="ЧистоВынос" className="w-28 h-28 mb-4 drop-shadow-lg" />
+            <h1 className="text-2xl font-bold text-foreground">Сброс пароля</h1>
+          </div>
+          <div className="glass-card rounded-2xl p-6">
+            <form onSubmit={handleForgotPassword} className="space-y-3">
+              <p className="text-sm text-muted-foreground mb-2">Введите email, и мы отправим ссылку для сброса пароля.</p>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground placeholder:text-muted-foreground text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              {error && <p className="text-destructive text-xs text-center">{error}</p>}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20 transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                {isLoading ? 'Отправка...' : 'Отправить ссылку'}
+              </button>
+            </form>
+            <button
+              onClick={() => { setShowForgotPassword(false); setError(''); }}
+              className="w-full mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Назад ко входу
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm animate-slide-up">
