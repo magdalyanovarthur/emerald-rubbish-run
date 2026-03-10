@@ -270,6 +270,15 @@ const LoginPage: React.FC = () => {
             >
               {isLoading ? 'Загрузка...' : isLogin ? 'Войти' : 'Зарегистрироваться'}
             </button>
+            {isLogin && (
+              <button
+                type="button"
+                onClick={() => { setShowForgotPassword(true); setError(''); }}
+                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Забыли пароль?
+              </button>
+            )}
           </form>
         </div>
       </div>

@@ -39,6 +39,7 @@ const DashboardRouter: React.FC = () => {
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
     <Route path="/create-order" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
     <Route path="/order/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
