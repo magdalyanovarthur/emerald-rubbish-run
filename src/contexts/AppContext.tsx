@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { User, Order, ChatMessage, Chat, OrderStatus, UserRole, Subscription, SubscriptionType } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
+import { toast } from '@/hooks/use-toast';
 
 interface AppContextType {
   user: User | null;
@@ -11,12 +12,12 @@ interface AppContextType {
   register: (name: string, email: string, phone: string, role: UserRole, password: string) => Promise<{ success: boolean; error?: string; needsConfirmation?: boolean }>;
   logout: () => Promise<void>;
   orders: Order[];
-  addOrder: (order: Omit<Order, 'id' | 'clientId' | 'clientName' | 'status' | 'createdAt'>) => void;
-  updateOrderStatus: (orderId: string, status: OrderStatus, courierId?: string) => void;
-  payForOrder: (orderId: string) => void;
+  addOrder: (order: Omit<Order, 'id' | 'clientId' | 'clientName' | 'status' | 'createdAt'>) => Promise<void>;
+  updateOrderStatus: (orderId: string, status: OrderStatus, courierId?: string) => Promise<void>;
+  payForOrder: (orderId: string) => Promise<void>;
   chats: Chat[];
   messages: ChatMessage[];
-  sendMessage: (orderId: string, text: string) => void;
+  sendMessage: (orderId: string, text: string) => Promise<void>;
   getChat: (orderId: string) => Chat | undefined;
   getOrderMessages: (orderId: string) => ChatMessage[];
   updateProfile: (data: Partial<User>) => void;
@@ -27,30 +28,82 @@ interface AppContextType {
 const AppContext = createContext<AppContextType>({} as AppContextType);
 export const useApp = () => useContext(AppContext);
 
-const DEMO_ORDERS: Order[] = [
-  { id: '1', clientId: 'c1', clientName: 'Иван Петров', street: '5-я просека', house: '12', apartment: '45', entrance: '2', scheduledDate: '2026-03-04', scheduledTime: '14:00', comment: 'Два мешка мусора у двери', status: 'searching', createdAt: '2026-03-04T10:30:00', lat: 53.2200, lng: 50.1900, paid: true },
-  { id: '2', clientId: 'c1', clientName: 'Иван Петров', courierId: 'k1', courierName: 'Алексей', street: 'Улица Советской Армии', house: '5', apartment: '12', entrance: '1', scheduledDate: '2026-03-04', scheduledTime: '10:00', comment: '', status: 'on_the_way', createdAt: '2026-03-04T09:00:00', lat: 53.2100, lng: 50.1400, paid: true },
-  { id: '3', clientId: 'c2', clientName: 'Мария С.', street: '6-я просека', house: '8', apartment: '3', entrance: '3', scheduledDate: '2026-03-05', scheduledTime: '09:30', comment: 'Крупногабаритный мусор', status: 'searching', createdAt: '2026-03-04T11:00:00', lat: 53.2220, lng: 50.1950, paid: true },
-];
-
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<Order[]>(DEMO_ORDERS);
-  const [chats, setChats] = useState<Chat[]>([
-    { orderId: '2', participants: ['c1', 'k1'], lastMessage: 'Уже еду!', lastMessageTime: '2026-03-04T09:15:00' },
-  ]);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'm1', orderId: '2', senderId: 'k1', senderName: 'Алексей', text: 'Принял ваш заказ, уже еду!', timestamp: '2026-03-04T09:10:00' },
-    { id: 'm2', orderId: '2', senderId: 'c1', senderName: 'Иван', text: 'Спасибо, жду!', timestamp: '2026-03-04T09:12:00' },
-    { id: 'm3', orderId: '2', senderId: 'k1', senderName: 'Алексей', text: 'Уже еду!', timestamp: '2026-03-04T09:15:00' },
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(() => {
     const saved = localStorage.getItem('cv-subscription');
     return saved ? JSON.parse(saved) : null;
   });
 
+  // --- Fetch helpers ---
+  const fetchOrders = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      setOrders(data.map(mapDbOrder));
+    }
+  }, []);
+
+  const fetchChats = useCallback(async () => {
+    const { data } = await supabase.from('chats').select('*');
+    if (data) {
+      setChats(data.map(c => ({
+        orderId: c.order_id,
+        participants: [c.participant_client, c.participant_courier],
+        lastMessage: c.last_message || undefined,
+        lastMessageTime: c.last_message_time || undefined,
+      })));
+    }
+  }, []);
+
+  const fetchMessages = useCallback(async () => {
+    const { data } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (data) {
+      setMessages(data.map(m => ({
+        id: m.id,
+        orderId: m.order_id,
+        senderId: m.sender_id,
+        senderName: m.sender_name,
+        text: m.text,
+        timestamp: m.created_at,
+      })));
+    }
+  }, []);
+
+  // --- Map DB row to Order type ---
+  function mapDbOrder(row: any): Order {
+    return {
+      id: row.id,
+      clientId: row.client_id,
+      clientName: row.client_name,
+      courierId: row.courier_id || undefined,
+      courierName: row.courier_name || undefined,
+      street: row.street,
+      house: row.house,
+      apartment: row.apartment,
+      entrance: row.entrance,
+      scheduledDate: row.scheduled_date,
+      scheduledTime: row.scheduled_time,
+      comment: row.comment,
+      status: row.status as OrderStatus,
+      createdAt: row.created_at,
+      lat: row.lat,
+      lng: row.lng,
+      paid: row.paid,
+    };
+  }
+
+  // --- Auth & profile ---
   const fetchProfile = useCallback(async (userId: string, email: string) => {
     const { data } = await supabase
       .from('profiles')
@@ -76,14 +129,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  // Initial auth + data load
   useEffect(() => {
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession);
         if (newSession?.user) {
           await fetchProfile(newSession.user.id, newSession.user.email || '');
+          fetchOrders();
+          fetchChats();
+          fetchMessages();
         } else {
           setUser(null);
+          setOrders([]);
+          setChats([]);
+          setMessages([]);
         }
         setLoading(false);
       }
@@ -93,14 +153,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSession(currentSession);
       if (currentSession?.user) {
         fetchProfile(currentSession.user.id, currentSession.user.email || '');
+        fetchOrders();
+        fetchChats();
+        fetchMessages();
       } else {
         setLoading(false);
       }
     });
 
     return () => authSub.unsubscribe();
-  }, [fetchProfile]);
+  }, [fetchProfile, fetchOrders, fetchChats, fetchMessages]);
 
+  // --- Realtime subscriptions ---
+  useEffect(() => {
+    const ordersChannel = supabase
+      .channel('orders-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        fetchOrders();
+      })
+      .subscribe();
+
+    const chatsChannel = supabase
+      .channel('chats-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, () => {
+        fetchChats();
+      })
+      .subscribe();
+
+    const msgsChannel = supabase
+      .channel('messages-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+        fetchMessages();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(chatsChannel);
+      supabase.removeChannel(msgsChannel);
+    };
+  }, [fetchOrders, fetchChats, fetchMessages]);
+
+  // --- Auth actions ---
   const login = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
@@ -121,13 +215,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         data: { name, phone, role },
       },
     });
-    if (error) {
-      return { success: false, error: error.message };
-    }
-    // If email confirmation is required, user won't have a session yet
-    if (data.user && !data.session) {
-      return { success: true, needsConfirmation: true };
-    }
+    if (error) return { success: false, error: error.message };
+    if (data.user && !data.session) return { success: true, needsConfirmation: true };
     return { success: true };
   }, []);
 
@@ -137,41 +226,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSession(null);
   }, []);
 
-  const addOrder = useCallback((orderData: Omit<Order, 'id' | 'clientId' | 'clientName' | 'status' | 'createdAt'>) => {
+  // --- Order actions ---
+  const addOrder = useCallback(async (orderData: Omit<Order, 'id' | 'clientId' | 'clientName' | 'status' | 'createdAt'>) => {
     if (!user) return;
-    const newOrder: Order = {
-      ...orderData,
-      id: `o${Date.now()}`,
-      clientId: user.id,
-      clientName: user.name,
+    const { error } = await supabase.from('orders').insert({
+      client_id: user.id,
+      client_name: user.name,
+      street: orderData.street,
+      house: orderData.house,
+      apartment: orderData.apartment,
+      entrance: orderData.entrance,
+      scheduled_date: orderData.scheduledDate,
+      scheduled_time: orderData.scheduledTime,
+      comment: orderData.comment,
+      lat: orderData.lat,
+      lng: orderData.lng,
+      paid: orderData.paid || false,
       status: 'searching',
-      createdAt: new Date().toISOString(),
-    };
-    setOrders(prev => [newOrder, ...prev]);
+    });
+    if (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось создать заказ', variant: 'destructive' });
+    }
+    // Realtime will update the list
   }, [user]);
 
-  const payForOrder = useCallback((orderId: string) => {
-    setOrders(prev => prev.map(o => o.id !== orderId ? o : { ...o, paid: true }));
+  const payForOrder = useCallback(async (orderId: string) => {
+    await supabase.from('orders').update({ paid: true }).eq('id', orderId);
   }, []);
 
-  const updateOrderStatus = useCallback((orderId: string, status: OrderStatus, courierId?: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      return { ...o, status, courierId: courierId || o.courierId, courierName: courierId ? user?.name : o.courierName };
-    }));
+  const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus, courierId?: string) => {
+    const updateData: any = { status };
+    if (courierId) {
+      updateData.courier_id = courierId;
+      updateData.courier_name = user?.name || '';
+    }
+    await supabase.from('orders').update(updateData).eq('id', orderId);
   }, [user]);
 
-  const sendMessage = useCallback((orderId: string, text: string) => {
+  // --- Chat actions ---
+  const sendMessage = useCallback(async (orderId: string, text: string) => {
     if (!user) return;
-    const msg: ChatMessage = { id: `m${Date.now()}`, orderId, senderId: user.id, senderName: user.name, text, timestamp: new Date().toISOString() };
-    setMessages(prev => [...prev, msg]);
-    setChats(prev => {
-      const existing = prev.find(c => c.orderId === orderId);
-      if (existing) return prev.map(c => c.orderId === orderId ? { ...c, lastMessage: text, lastMessageTime: msg.timestamp } : c);
-      const order = orders.find(o => o.id === orderId);
-      return [...prev, { orderId, participants: [order?.clientId || '', order?.courierId || ''], lastMessage: text, lastMessageTime: msg.timestamp }];
+
+    // Insert message
+    await supabase.from('chat_messages').insert({
+      order_id: orderId,
+      sender_id: user.id,
+      sender_name: user.name,
+      text,
     });
-  }, [user, orders]);
+
+    // Upsert chat
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+      const existingChat = chats.find(c => c.orderId === orderId);
+      if (existingChat) {
+        await supabase.from('chats')
+          .update({ last_message: text, last_message_time: new Date().toISOString() })
+          .eq('order_id', orderId);
+      } else {
+        await supabase.from('chats').insert({
+          order_id: orderId,
+          participant_client: order.clientId,
+          participant_courier: order.courierId || user.id,
+          last_message: text,
+          last_message_time: new Date().toISOString(),
+        });
+      }
+    }
+  }, [user, orders, chats]);
 
   const getChat = useCallback((orderId: string) => chats.find(c => c.orderId === orderId), [chats]);
   const getOrderMessages = useCallback((orderId: string) => messages.filter(m => m.orderId === orderId), [messages]);
