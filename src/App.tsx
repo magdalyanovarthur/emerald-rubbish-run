@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import MobileLayout from "@/components/layout/MobileLayout";
 import LoginPage from "@/pages/LoginPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import ClientDashboard from "@/pages/ClientDashboard";
 import CourierDashboard from "@/pages/CourierDashboard";
 import CreateOrder from "@/pages/CreateOrder";
