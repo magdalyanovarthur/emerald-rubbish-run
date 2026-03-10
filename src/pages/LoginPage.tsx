@@ -3,6 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/types';
 import { Mail, Lock, User, Phone, CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo.png';
 
 const LoginPage: React.FC = () => {
