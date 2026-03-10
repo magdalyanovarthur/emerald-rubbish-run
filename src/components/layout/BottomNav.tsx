@@ -31,9 +31,9 @@ const BottomNav: React.FC = () => {
             <React.Fragment key={tab.path}>
               <button
                 onClick={() => navigate(tab.path)}
-                className={`flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+                className={`flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl transition-all duration-200 ${isActive ? 'text-primary scale-110' : 'text-muted-foreground hover:text-foreground'}`}
               >
-                <tab.icon className="w-5 h-5" />
+                <tab.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'drop-shadow-sm' : ''}`} />
                 <span className="text-[10px] font-medium">{tab.label}</span>
               </button>
               {showCreateBtn && (

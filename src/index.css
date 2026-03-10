@@ -114,3 +114,29 @@
     @apply bg-card/80 backdrop-blur-md border border-border shadow-lg;
   }
 }
+
+/* Modern button animations */
+button, [role="button"], a[class*="btn"] {
+  transition: transform 0.15s cubic-bezier(0.25, 0.1, 0.25, 1),
+              box-shadow 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+              background-color 0.2s ease;
+}
+
+button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Primary/colored buttons get a glow on hover */
+button[class*="bg-primary"]:hover:not(:disabled),
+button[class*="bg-destructive"]:hover:not(:disabled),
+button[class*="bg-success"]:hover:not(:disabled) {
+  box-shadow: 0 4px 16px -2px hsl(var(--primary) / 0.35);
+  transform: translateY(-1px);
+}
+
+button[class*="bg-primary"]:active:not(:disabled),
+button[class*="bg-destructive"]:active:not(:disabled),
+button[class*="bg-success"]:active:not(:disabled) {
+  transform: scale(0.96) translateY(0);
+  box-shadow: 0 2px 8px -2px hsl(var(--primary) / 0.2);
+}
