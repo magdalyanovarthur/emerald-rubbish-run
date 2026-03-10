@@ -219,11 +219,12 @@ const ClientDashboard: React.FC = () => {
             </div>
             <button
               onClick={confirmPayment}
-              className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+              disabled={isProcessing}
+              className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              <Check className="w-4 h-4" /> Подтвердить оплату
+              {isProcessing ? <><Loader2 className="w-4 h-4 animate-spin" /> Перенаправление...</> : <><Check className="w-4 h-4" /> Оплатить через ЮKassa</>}
             </button>
-            <p className="text-[10px] text-muted-foreground text-center mt-3">Демо-режим: оплата симулируется</p>
+            <p className="text-[10px] text-muted-foreground text-center mt-3">Вы будете перенаправлены на страницу оплаты ЮKassa</p>
           </div>
         </div>
       )}
