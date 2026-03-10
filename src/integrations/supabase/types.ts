@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json | null
+          order_id: string | null
+          payment_type: string
+          status: string
+          subscription_type: string | null
+          updated_at: string
+          user_id: string
+          yookassa_payment_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          payment_type?: string
+          status?: string
+          subscription_type?: string | null
+          updated_at?: string
+          user_id: string
+          yookassa_payment_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          payment_type?: string
+          status?: string
+          subscription_type?: string | null
+          updated_at?: string
+          user_id?: string
+          yookassa_payment_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null

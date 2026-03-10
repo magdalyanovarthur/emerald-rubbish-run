@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { STATUS_LABELS, STATUS_COLORS } from '@/types';
-import { Package, Clock, MapPin, CreditCard, Crown, CalendarCheck, Repeat, Check, X } from 'lucide-react';
+import { Package, Clock, MapPin, CreditCard, Crown, CalendarCheck, Repeat, Check, X, Loader2 } from 'lucide-react';
 import OrdersMap from '@/components/OrdersMap';
+import { usePayment } from '@/hooks/usePayment';
 
 const ClientDashboard: React.FC = () => {
   const { user, orders, subscription, purchaseSubscription, payForOrder } = useApp();
   const navigate = useNavigate();
+  const { createPayment, isProcessing } = usePayment();
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [subModal, setSubModal] = useState<'every_other_day' | 'every_day' | null>(null);
 
@@ -22,17 +24,24 @@ const ClientDashboard: React.FC = () => {
     setPayingOrderId(orderId);
   };
 
-  const confirmPayment = () => {
+  const confirmPayment = async () => {
     if (payingOrderId) {
-      payForOrder(payingOrderId);
-      setPayingOrderId(null);
+      await createPayment({
+        payment_type: 'order',
+        amount: 99,
+        order_id: payingOrderId,
+      });
     }
   };
 
-  const confirmSubscription = () => {
+  const confirmSubscription = async () => {
     if (subModal) {
-      purchaseSubscription(subModal);
-      setSubModal(null);
+      const amount = subModal === 'every_other_day' ? 1300 : 2500;
+      await createPayment({
+        payment_type: 'subscription',
+        amount,
+        subscription_type: subModal,
+      });
     }
   };
 
@@ -210,11 +219,12 @@ const ClientDashboard: React.FC = () => {
             </div>
             <button
               onClick={confirmPayment}
-              className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+              disabled={isProcessing}
+              className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              <Check className="w-4 h-4" /> Подтвердить оплату
+              {isProcessing ? <><Loader2 className="w-4 h-4 animate-spin" /> Перенаправление...</> : <><Check className="w-4 h-4" /> Оплатить через ЮKassa</>}
             </button>
-            <p className="text-[10px] text-muted-foreground text-center mt-3">Демо-режим: оплата симулируется</p>
+            <p className="text-[10px] text-muted-foreground text-center mt-3">Вы будете перенаправлены на страницу оплаты ЮKassa</p>
           </div>
         </div>
       )}
@@ -240,11 +250,12 @@ const ClientDashboard: React.FC = () => {
             </div>
             <button
               onClick={confirmSubscription}
-              className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+              disabled={isProcessing}
+              className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50"
             >
-              <Check className="w-4 h-4" /> Подтвердить оплату
+              {isProcessing ? <><Loader2 className="w-4 h-4 animate-spin" /> Перенаправление...</> : <><Check className="w-4 h-4" /> Оплатить через ЮKassa</>}
             </button>
-            <p className="text-[10px] text-muted-foreground text-center mt-3">Демо-режим: оплата симулируется</p>
+            <p className="text-[10px] text-muted-foreground text-center mt-3">Вы будете перенаправлены на страницу оплаты ЮKassa</p>
           </div>
         </div>
       )}
