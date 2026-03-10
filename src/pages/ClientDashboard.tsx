@@ -10,6 +10,7 @@ const ClientDashboard: React.FC = () => {
   const { user, orders, subscription, purchaseSubscription, payForOrder } = useApp();
   const navigate = useNavigate();
   const { createPayment, isProcessing } = usePayment();
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
   const [subModal, setSubModal] = useState<'every_other_day' | 'every_day' | null>(null);
 
   const myOrders = orders.filter(o => o.clientId === user?.id);
@@ -23,17 +24,24 @@ const ClientDashboard: React.FC = () => {
     setPayingOrderId(orderId);
   };
 
-  const confirmPayment = () => {
+  const confirmPayment = async () => {
     if (payingOrderId) {
-      payForOrder(payingOrderId);
-      setPayingOrderId(null);
+      await createPayment({
+        payment_type: 'order',
+        amount: 99,
+        order_id: payingOrderId,
+      });
     }
   };
 
-  const confirmSubscription = () => {
+  const confirmSubscription = async () => {
     if (subModal) {
-      purchaseSubscription(subModal);
-      setSubModal(null);
+      const amount = subModal === 'every_other_day' ? 1300 : 2500;
+      await createPayment({
+        payment_type: 'subscription',
+        amount,
+        subscription_type: subModal,
+      });
     }
   };
 
