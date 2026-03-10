@@ -14,6 +14,139 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          sender_id: string
+          sender_name: string
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          sender_id: string
+          sender_name?: string
+          text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          sender_id?: string
+          sender_name?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chats: {
+        Row: {
+          created_at: string
+          id: string
+          last_message: string | null
+          last_message_time: string | null
+          order_id: string
+          participant_client: string
+          participant_courier: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          last_message_time?: string | null
+          order_id: string
+          participant_client: string
+          participant_courier: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          last_message_time?: string | null
+          order_id?: string
+          participant_client?: string
+          participant_courier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chats_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          apartment: string
+          client_id: string
+          client_name: string
+          comment: string
+          courier_id: string | null
+          courier_name: string | null
+          created_at: string
+          entrance: string
+          house: string
+          id: string
+          lat: number
+          lng: number
+          paid: boolean
+          scheduled_date: string
+          scheduled_time: string
+          status: string
+          street: string
+        }
+        Insert: {
+          apartment?: string
+          client_id: string
+          client_name?: string
+          comment?: string
+          courier_id?: string | null
+          courier_name?: string | null
+          created_at?: string
+          entrance?: string
+          house: string
+          id?: string
+          lat?: number
+          lng?: number
+          paid?: boolean
+          scheduled_date: string
+          scheduled_time: string
+          status?: string
+          street: string
+        }
+        Update: {
+          apartment?: string
+          client_id?: string
+          client_name?: string
+          comment?: string
+          courier_id?: string | null
+          courier_name?: string | null
+          created_at?: string
+          entrance?: string
+          house?: string
+          id?: string
+          lat?: number
+          lng?: number
+          paid?: boolean
+          scheduled_date?: string
+          scheduled_time?: string
+          status?: string
+          street?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
