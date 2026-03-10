@@ -51,6 +51,28 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Введите email');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        setError(error.message);
+      } else {
+        setResetEmailSent(true);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (showConfirmation) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
