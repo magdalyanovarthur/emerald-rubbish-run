@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { STATUS_LABELS, STATUS_COLORS } from '@/types';
-import { Package, Clock, MapPin, CreditCard, Crown, CalendarCheck, Repeat, Check, X } from 'lucide-react';
+import { Package, Clock, MapPin, CreditCard, Crown, CalendarCheck, Repeat, Check, X, Loader2 } from 'lucide-react';
 import OrdersMap from '@/components/OrdersMap';
+import { usePayment } from '@/hooks/usePayment';
 
 const ClientDashboard: React.FC = () => {
   const { user, orders, subscription, purchaseSubscription, payForOrder } = useApp();
   const navigate = useNavigate();
-  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const { createPayment, isProcessing } = usePayment();
   const [subModal, setSubModal] = useState<'every_other_day' | 'every_day' | null>(null);
 
   const myOrders = orders.filter(o => o.clientId === user?.id);
