@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { User, Order, ChatMessage, Chat, OrderStatus, UserRole, Subscription, SubscriptionType } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
@@ -22,11 +22,60 @@ interface AppContextType {
   getOrderMessages: (orderId: string) => ChatMessage[];
   updateProfile: (data: Partial<User>) => void;
   subscription: Subscription | null;
-  purchaseSubscription: (type: SubscriptionType) => void;
+  purchaseSubscription: (type: SubscriptionType) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
 export const useApp = () => useContext(AppContext);
+
+// --- Notification sound helper ---
+function playNotificationSound() {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Two-tone chime
+    const playTone = (freq: number, startTime: number, duration: number) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    const now = audioCtx.currentTime;
+    playTone(880, now, 0.15);
+    playTone(1100, now + 0.15, 0.2);
+    playTone(1320, now + 0.3, 0.25);
+  } catch {
+    // Audio not available
+  }
+}
+
+// --- Map DB row to Order type ---
+function mapDbOrder(row: any): Order {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    clientName: row.client_name,
+    courierId: row.courier_id || undefined,
+    courierName: row.courier_name || undefined,
+    street: row.street,
+    house: row.house,
+    apartment: row.apartment,
+    entrance: row.entrance,
+    scheduledDate: row.scheduled_date,
+    scheduledTime: row.scheduled_time,
+    comment: row.comment,
+    status: row.status as OrderStatus,
+    createdAt: row.created_at,
+    lat: row.lat,
+    lng: row.lng,
+    paid: row.paid,
+  };
+}
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -35,10 +84,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orders, setOrders] = useState<Order[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>(() => {
-    const saved = localStorage.getItem('cv-subscription');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const userRef = useRef<User | null>(null);
+  const ordersInitialized = useRef(false);
+
+  // Keep ref in sync
+  useEffect(() => { userRef.current = user; }, [user]);
 
   // --- Fetch helpers ---
   const fetchOrders = useCallback(async () => {
@@ -80,28 +131,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // --- Map DB row to Order type ---
-  function mapDbOrder(row: any): Order {
-    return {
-      id: row.id,
-      clientId: row.client_id,
-      clientName: row.client_name,
-      courierId: row.courier_id || undefined,
-      courierName: row.courier_name || undefined,
-      street: row.street,
-      house: row.house,
-      apartment: row.apartment,
-      entrance: row.entrance,
-      scheduledDate: row.scheduled_date,
-      scheduledTime: row.scheduled_time,
-      comment: row.comment,
-      status: row.status as OrderStatus,
-      createdAt: row.created_at,
-      lat: row.lat,
-      lng: row.lng,
-      paid: row.paid,
-    };
-  }
+  const fetchSubscription = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    if (data) {
+      setSubscription({
+        type: data.type as SubscriptionType,
+        startDate: data.start_date,
+        endDate: data.end_date,
+      });
+    } else {
+      setSubscription(null);
+    }
+  }, []);
 
   // --- Auth & profile ---
   const fetchProfile = useCallback(async (userId: string, email: string) => {
@@ -139,11 +184,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           fetchOrders();
           fetchChats();
           fetchMessages();
+          fetchSubscription(newSession.user.id);
         } else {
           setUser(null);
           setOrders([]);
           setChats([]);
           setMessages([]);
+          setSubscription(null);
         }
         setLoading(false);
       }
@@ -156,19 +203,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchOrders();
         fetchChats();
         fetchMessages();
+        fetchSubscription(currentSession.user.id);
       } else {
         setLoading(false);
       }
     });
 
     return () => authSub.unsubscribe();
-  }, [fetchProfile, fetchOrders, fetchChats, fetchMessages]);
+  }, [fetchProfile, fetchOrders, fetchChats, fetchMessages, fetchSubscription]);
 
-  // --- Realtime subscriptions ---
+  // --- Realtime subscriptions with courier notifications ---
   useEffect(() => {
     const ordersChannel = supabase
       .channel('orders-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+        const currentUser = userRef.current;
+        if (currentUser?.role === 'courier' && payload.new && (payload.new as any).status === 'searching') {
+          playNotificationSound();
+          toast({
+            title: '🆕 Новый заказ!',
+            description: `${(payload.new as any).street}, д. ${(payload.new as any).house}`,
+          });
+        }
+        fetchOrders();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, () => {
+        fetchOrders();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'orders' }, () => {
         fetchOrders();
       })
       .subscribe();
@@ -182,7 +244,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const msgsChannel = supabase
       .channel('messages-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+        const currentUser = userRef.current;
+        if (currentUser && payload.new && (payload.new as any).sender_id !== currentUser.id) {
+          playNotificationSound();
+          toast({
+            title: '💬 Новое сообщение',
+            description: (payload.new as any).text?.substring(0, 50),
+          });
+        }
+        fetchMessages();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, () => {
         fetchMessages();
       })
       .subscribe();
@@ -247,7 +320,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (error) {
       toast({ title: 'Ошибка', description: 'Не удалось создать заказ', variant: 'destructive' });
     }
-    // Realtime will update the list
   }, [user]);
 
   const payForOrder = useCallback(async (orderId: string) => {
@@ -267,7 +339,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const sendMessage = useCallback(async (orderId: string, text: string) => {
     if (!user) return;
 
-    // Insert message
     await supabase.from('chat_messages').insert({
       order_id: orderId,
       sender_id: user.id,
@@ -275,7 +346,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       text,
     });
 
-    // Upsert chat
     const order = orders.find(o => o.id === orderId);
     if (order) {
       const existingChat = chats.find(c => c.orderId === orderId);
@@ -316,14 +386,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }).eq('user_id', user.id);
   }, [user]);
 
-  const purchaseSubscription = useCallback((type: SubscriptionType) => {
+  const purchaseSubscription = useCallback(async (type: SubscriptionType) => {
+    if (!user) return;
     const now = new Date();
     const endDate = new Date(now);
     endDate.setMonth(endDate.getMonth() + 1);
-    const sub: Subscription = { type, startDate: now.toISOString(), endDate: endDate.toISOString() };
-    setSubscription(sub);
-    localStorage.setItem('cv-subscription', JSON.stringify(sub));
-  }, []);
+
+    // Upsert subscription in DB
+    const { data: existing } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (existing) {
+      await supabase.from('subscriptions').update({
+        type,
+        start_date: now.toISOString(),
+        end_date: endDate.toISOString(),
+      }).eq('user_id', user.id);
+    } else {
+      await supabase.from('subscriptions').insert({
+        user_id: user.id,
+        type,
+        start_date: now.toISOString(),
+        end_date: endDate.toISOString(),
+      });
+    }
+
+    setSubscription({ type, startDate: now.toISOString(), endDate: endDate.toISOString() });
+    // Clean up old localStorage
+    localStorage.removeItem('cv-subscription');
+  }, [user]);
 
   return (
     <AppContext.Provider value={{ user, session, loading, login, register, logout, orders, addOrder, updateOrderStatus, payForOrder, chats, messages, sendMessage, getChat, getOrderMessages, updateProfile, subscription, purchaseSubscription }}>
