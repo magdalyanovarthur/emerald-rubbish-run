@@ -37,14 +37,14 @@ const CreateOrder: React.FC = () => {
 
   const hasActiveSubscription = subscription && new Date(subscription.endDate) > new Date();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!street || !isHouseValid || !apartment || !entrance || !scheduledDate || !scheduledTime) {
       setError('Заполните обязательные поля');
       return;
     }
     const coords = STREET_COORDS[street] || { lat: 53.2100, lng: 50.1500 };
-    addOrder({
+    await addOrder({
       street,
       house,
       apartment,
