@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
+    const userEmail = user.email;
 
     const { payment_type, amount, order_id, subscription_type, return_url } = await req.json();
 
