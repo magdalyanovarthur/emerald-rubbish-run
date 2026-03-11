@@ -8,6 +8,7 @@ import { AppProvider, useApp } from "@/contexts/AppContext";
 import MobileLayout from "@/components/layout/MobileLayout";
 import LoginPage from "@/pages/LoginPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import AuthCallback from "@/pages/AuthCallback";
 import ClientDashboard from "@/pages/ClientDashboard";
 import CourierDashboard from "@/pages/CourierDashboard";
 import CreateOrder from "@/pages/CreateOrder";
@@ -40,6 +41,7 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="/auth/callback" element={<AuthCallback />} />
     <Route path="/" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
     <Route path="/create-order" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
     <Route path="/order/:id" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />

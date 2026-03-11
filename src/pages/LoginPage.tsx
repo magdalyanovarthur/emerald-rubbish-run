@@ -60,10 +60,7 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const isNative = typeof (window as any).Capacitor !== 'undefined';
-      const redirectUrl = isNative
-        ? 'chistovynos://auth/callback#type=recovery'
-        : `${window.location.origin}/reset-password`;
+      const redirectUrl = `${window.location.origin}/auth/callback#type=recovery`;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
