@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { STREETS, STREET_COORDS, STREET_HOUSES } from '@/types';
@@ -8,6 +8,7 @@ import { ru } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { supabase } from '@/integrations/supabase/client';
 
 const TIMES = Array.from({ length: 6 }, (_, i) => {
   const startHour = 9 + i * 2;
@@ -16,10 +17,37 @@ const TIMES = Array.from({ length: 6 }, (_, i) => {
 });
 
 const CreateOrder: React.FC = () => {
-  const { addOrder, subscription } = useApp();
+  const { addOrder, subscription, user } = useApp();
   const navigate = useNavigate();
   const [street, setStreet] = useState('');
   const [house, setHouse] = useState('');
+  const [apartment, setApartment] = useState('');
+  const [entrance, setEntrance] = useState('');
+  const [scheduledDate, setScheduledDate] = useState<Date>();
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [comment, setComment] = useState('');
+  const [error, setError] = useState('');
+
+  // Автозаполнение адреса из профиля
+  useEffect(() => {
+    if (!user) return;
+    const loadProfileAddress = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('profile_street, profile_house, profile_entrance, profile_apartment')
+        .eq('user_id', user.id)
+        .single();
+      if (data) {
+        if (data.profile_street && (STREETS as readonly string[]).includes(data.profile_street)) {
+          setStreet(data.profile_street as typeof STREETS[number]);
+          if (data.profile_house) setHouse(data.profile_house);
+        }
+        if (data.profile_apartment) setApartment(data.profile_apartment);
+        if (data.profile_entrance) setEntrance(data.profile_entrance);
+      }
+    };
+    loadProfileAddress();
+  }, [user]);
 
   const availableHouses = street ? (STREET_HOUSES[street] || []) : [];
   const isHouseValid = house.trim() !== '' && availableHouses.map(h => h.toLowerCase()).includes(house.trim().toLowerCase());
@@ -28,12 +56,6 @@ const CreateOrder: React.FC = () => {
     setStreet(value);
     setHouse('');
   };
-  const [apartment, setApartment] = useState('');
-  const [entrance, setEntrance] = useState('');
-  const [scheduledDate, setScheduledDate] = useState<Date>();
-  const [scheduledTime, setScheduledTime] = useState('');
-  const [comment, setComment] = useState('');
-  const [error, setError] = useState('');
 
   const hasActiveSubscription = subscription && new Date(subscription.endDate) > new Date();
 
