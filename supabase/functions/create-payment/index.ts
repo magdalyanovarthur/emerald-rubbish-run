@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
+    const userEmail = user.email;
 
     const { payment_type, amount, order_id, subscription_type, return_url } = await req.json();
 
@@ -103,6 +104,24 @@ Deno.serve(async (req) => {
         },
         capture: true,
         description,
+        receipt: {
+          customer: {
+            email: userEmail,
+          },
+          items: [
+            {
+              description,
+              quantity: "1",
+              amount: {
+                value: amount.toFixed(2),
+                currency: "RUB",
+              },
+              vat_code: 1,
+              payment_subject: "service",
+              payment_mode: "full_payment",
+            },
+          ],
+        },
         metadata: {
           payment_id: paymentRecord.id,
           payment_type,
