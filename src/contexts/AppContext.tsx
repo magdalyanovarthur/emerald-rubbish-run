@@ -280,11 +280,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const register = useCallback(async (name: string, email: string, phone: string, role: UserRole, password: string) => {
+    // Use custom URL scheme for native app, web origin for browser
+    const isNative = typeof (window as any).Capacitor !== 'undefined';
+    const redirectUrl = isNative
+      ? 'chistovynos://auth/callback'
+      : window.location.origin;
+
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirectUrl,
         data: { name, phone, role },
       },
     });
