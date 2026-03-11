@@ -8,6 +8,14 @@ const config: CapacitorConfig = {
     url: 'https://6bd0ce85-1ad0-43d1-9c95-eeaf6b944b00.lovableproject.com?forceHideBadge=true',
     cleartext: true,
   },
+  plugins: {
+    App: {
+      // Custom URL scheme for deep linking (iOS Info.plist CFBundleURLSchemes)
+    },
+  },
+  ios: {
+    scheme: 'chistovynos',
+  },
 };
 
 export default config;
