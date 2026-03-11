@@ -136,7 +136,19 @@ const AuthCallback: React.FC = () => {
             Открыть в приложении
           </a>
           <button
-            onClick={() => navigate('/', { replace: true })}
+            onClick={async () => {
+              const hash = window.location.hash.substring(1);
+              const params = new URLSearchParams(hash);
+              const accessToken = params.get('access_token');
+              const refreshToken = params.get('refresh_token');
+              if (accessToken && refreshToken) {
+                await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                });
+              }
+              navigate('/', { replace: true });
+            }}
             className="w-full mt-3 py-3 rounded-xl bg-secondary text-secondary-foreground font-semibold text-sm transition-transform active:scale-[0.98]"
           >
             Продолжить в браузере
