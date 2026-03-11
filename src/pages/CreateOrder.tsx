@@ -38,8 +38,8 @@ const CreateOrder: React.FC = () => {
         .eq('user_id', user.id)
         .single();
       if (data) {
-        if (data.profile_street && STREETS.includes(data.profile_street)) {
-          setStreet(data.profile_street);
+        if (data.profile_street && (STREETS as readonly string[]).includes(data.profile_street)) {
+          setStreet(data.profile_street as typeof STREETS[number]);
           if (data.profile_house) setHouse(data.profile_house);
         }
         if (data.profile_apartment) setApartment(data.profile_apartment);
@@ -48,6 +48,14 @@ const CreateOrder: React.FC = () => {
     };
     loadProfileAddress();
   }, [user]);
+
+  const availableHouses = street ? (STREET_HOUSES[street] || []) : [];
+  const isHouseValid = house.trim() !== '' && availableHouses.map(h => h.toLowerCase()).includes(house.trim().toLowerCase());
+
+  const handleStreetChange = (value: string) => {
+    setStreet(value);
+    setHouse('');
+  };
 
   const hasActiveSubscription = subscription && new Date(subscription.endDate) > new Date();
 
