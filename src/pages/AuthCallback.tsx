@@ -11,6 +11,11 @@ const AuthCallback: React.FC = () => {
 
   const isNative = typeof (window as any).Capacitor !== 'undefined';
 
+  const isMobileBrowser = () => {
+    const ua = navigator.userAgent || '';
+    return /iPhone|iPad|iPod|Android/i.test(ua);
+  };
+
   useEffect(() => {
     const handleCallback = async () => {
       try {
@@ -42,24 +47,27 @@ const AuthCallback: React.FC = () => {
           return;
         }
 
-        // Web browser: try to set session, then show "Open in app" button
+        // Mobile browser: show "Open in app" button WITHOUT setting session
+        // (setting session triggers onAuthStateChange which causes redirect)
+        if (isMobileBrowser()) {
+          setStatus('show-open-app');
+          return;
+        }
+
+        // Desktop browser: set session and redirect
         if (accessToken && refreshToken) {
-          // Set session for web too (in case user stays in browser)
           await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
         }
 
-        // Check if this is a recovery flow
         if (type === 'recovery') {
-          // For recovery in browser, redirect to reset-password page
           navigate('/reset-password', { replace: true });
           return;
         }
 
-        // Show "Open in app" button for mobile browsers
-        setStatus('show-open-app');
+        navigate('/', { replace: true });
       } catch (err: any) {
         setErrorMsg(err.message || 'Произошла ошибка');
         setStatus('error');
