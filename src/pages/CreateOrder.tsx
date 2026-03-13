@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { STREETS, STREET_COORDS, STREET_HOUSES } from '@/types';
 import { MapPin, Home, DoorOpen, MessageSquare, Send, CalendarIcon, Clock, Building } from 'lucide-react';
+import Map, { Marker, NavigationControl } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoibmV1cm9hcnRodXIiLCJhIjoiY21tb2pxem5kMGU4ZjJwcjByZ3d6aGpuciJ9.vP-hvC2mgk8k2ZUkBzx8LA';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
