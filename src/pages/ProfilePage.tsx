@@ -224,6 +224,32 @@ const ProfilePage: React.FC = () => {
       >
         <LogOut className="w-4 h-4" /> Выйти из аккаунта
       </button>
+
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <button className="w-full py-3 rounded-2xl bg-destructive text-destructive-foreground text-sm font-medium flex items-center justify-center gap-2">
+            <Trash2 className="w-4 h-4" /> Удалить аккаунт
+          </button>
+        </AlertDialogTrigger>
+        <AlertDialogContent className="rounded-2xl mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить аккаунт?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие необратимо. Все ваши данные, заказы и история будут удалены навсегда.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Удаление...' : 'Удалить'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
