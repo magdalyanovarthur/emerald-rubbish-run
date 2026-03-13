@@ -5,6 +5,8 @@ import { UserRole } from '@/types';
 import { Mail, Lock, User, Phone, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo.png';
+import LegalDocumentDialog from '@/components/LegalDocumentDialog';
+import { offerAgreementText, privacyPolicyText } from '@/data/legalTexts';
 
 const LoginPage: React.FC = () => {
   const { login, register } = useApp();
