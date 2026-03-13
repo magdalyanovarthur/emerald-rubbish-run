@@ -1,8 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { User, Phone, MapPin, LogOut, Save, Shield, Camera, Building, DoorOpen, Layers } from 'lucide-react';
+import { User, Phone, MapPin, LogOut, Save, Shield, Camera, Trash2 } from 'lucide-react';
 import { STREETS, STREET_HOUSES } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile, logout } = useApp();
