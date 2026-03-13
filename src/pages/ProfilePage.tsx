@@ -51,9 +51,30 @@ const ProfilePage: React.FC = () => {
     setEditing(false);
   };
 
+  const [deleting, setDeleting] = useState(false);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Нет сессии');
+
+      const res = await supabase.functions.invoke('delete-account');
+      if (res.error) throw res.error;
+
+      await supabase.auth.signOut();
+      navigate('/login');
+      toast.success('Аккаунт удалён');
+    } catch (e: any) {
+      toast.error(e.message || 'Ошибка удаления аккаунта');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const availableHouses = profileStreet ? (STREET_HOUSES[profileStreet] || []) : [];
