@@ -1,8 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { User, Phone, MapPin, LogOut, Save, Shield, Camera, Building, DoorOpen, Layers } from 'lucide-react';
+import { User, Phone, MapPin, LogOut, Save, Shield, Camera, Trash2 } from 'lucide-react';
 import { STREETS, STREET_HOUSES } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile, logout } = useApp();
@@ -44,9 +51,30 @@ const ProfilePage: React.FC = () => {
     setEditing(false);
   };
 
+  const [deleting, setDeleting] = useState(false);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Нет сессии');
+
+      const res = await supabase.functions.invoke('delete-account');
+      if (res.error) throw res.error;
+
+      await supabase.auth.signOut();
+      navigate('/login');
+      toast.success('Аккаунт удалён');
+    } catch (e: any) {
+      toast.error(e.message || 'Ошибка удаления аккаунта');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const availableHouses = profileStreet ? (STREET_HOUSES[profileStreet] || []) : [];
@@ -196,6 +224,32 @@ const ProfilePage: React.FC = () => {
       >
         <LogOut className="w-4 h-4" /> Выйти из аккаунта
       </button>
+
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <button className="w-full py-3 rounded-2xl bg-destructive text-destructive-foreground text-sm font-medium flex items-center justify-center gap-2">
+            <Trash2 className="w-4 h-4" /> Удалить аккаунт
+          </button>
+        </AlertDialogTrigger>
+        <AlertDialogContent className="rounded-2xl mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить аккаунт?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие необратимо. Все ваши данные, заказы и история будут удалены навсегда.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Удаление...' : 'Удалить'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
