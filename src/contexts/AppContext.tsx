@@ -196,6 +196,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
+    // Safety timeout: force loading off after 5 seconds
+    const loadingTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       if (currentSession?.user) {
@@ -203,10 +208,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchOrders();
         fetchChats();
         fetchMessages();
-        fetchSubscription(currentSession.user.id);
+        fetchSubscription(currentSession.user.id).finally(() => {
+          clearTimeout(loadingTimeout);
+          setLoading(false);
+        });
       } else {
+        clearTimeout(loadingTimeout);
         setLoading(false);
       }
+    }).catch(() => {
+      clearTimeout(loadingTimeout);
+      setLoading(false);
     });
 
     return () => authSub.unsubscribe();
