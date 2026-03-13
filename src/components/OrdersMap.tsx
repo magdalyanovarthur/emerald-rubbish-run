@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { Order } from '@/types';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import Map, { Marker, Popup, NavigationControl } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoibmV1cm9hcnRodXIiLCJhIjoiY21tb2pxem5kMGU4ZjJwcjByZ3d6aGpuciJ9.vP-hvC2mgk8k2ZUkBzx8LA';
 
 interface OrdersMapProps {
   orders: Order[];
@@ -10,60 +12,80 @@ interface OrdersMapProps {
 }
 
 const OrdersMap: React.FC<OrdersMapProps> = ({ orders, onOrderClick, height = 'h-56' }) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.LayerGroup | null>(null);
+  const [popupInfo, setPopupInfo] = React.useState<Order | null>(null);
 
-  useEffect(() => {
-    if (!mapRef.current) return;
+  const bounds = React.useMemo(() => {
+    if (orders.length === 0) return null;
+    const lngs = orders.map(o => o.lng);
+    const lats = orders.map(o => o.lat);
+    return [
+      [Math.min(...lngs) - 0.005, Math.min(...lats) - 0.005],
+      [Math.max(...lngs) + 0.005, Math.max(...lats) + 0.005],
+    ] as [[number, number], [number, number]];
+  }, [orders]);
 
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapRef.current).setView([53.2150, 50.1600], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-      }).addTo(map);
-      mapInstanceRef.current = map;
-      markersRef.current = L.layerGroup().addTo(map);
+  const initialViewState = React.useMemo(() => {
+    if (bounds) {
+      const centerLng = (bounds[0][0] + bounds[1][0]) / 2;
+      const centerLat = (bounds[0][1] + bounds[1][1]) / 2;
+      return { longitude: centerLng, latitude: centerLat, zoom: 13 };
     }
+    return { longitude: 50.1600, latitude: 53.2150, zoom: 13 };
+  }, [bounds]);
 
-    const markers = markersRef.current!;
-    markers.clearLayers();
-
-    orders.forEach(order => {
-      const icon = L.divIcon({
-        html: `<div style="background:hsl(160,60%,38%);width:20px;height:20px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10],
-        className: '',
-      });
-
-      const marker = L.marker([order.lat, order.lng], { icon }).addTo(markers);
-      marker.bindPopup(`<b>${order.street}, д. ${order.house}</b><br/>кв. ${order.apartment}, п. ${order.entrance}`);
-      if (onOrderClick) {
-        marker.on('click', () => onOrderClick(order.id));
-      }
-    });
-
-    if (orders.length > 0) {
-      const bounds = L.latLngBounds(orders.map(o => [o.lat, o.lng]));
-      mapInstanceRef.current!.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
-    }
-
-    return () => {};
-  }, [orders, onOrderClick]);
-
-  useEffect(() => {
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
+  const handleMarkerClick = useCallback((order: Order) => {
+    setPopupInfo(order);
+    if (onOrderClick) onOrderClick(order.id);
+  }, [onOrderClick]);
 
   return (
     <div className="glass-card rounded-2xl overflow-hidden">
-      <div ref={mapRef} className={`${height} w-full`} />
+      <div className={`${height} w-full`}>
+        <Map
+          initialViewState={initialViewState}
+          style={{ width: '100%', height: '100%' }}
+          mapStyle="mapbox://styles/mapbox/streets-v12"
+          mapboxAccessToken={MAPBOX_TOKEN}
+        >
+          <NavigationControl position="top-right" />
+          {orders.map(order => (
+            <Marker
+              key={order.id}
+              longitude={order.lng}
+              latitude={order.lat}
+              anchor="center"
+              onClick={(e) => {
+                e.originalEvent.stopPropagation();
+                handleMarkerClick(order);
+              }}
+            >
+              <div
+                style={{
+                  background: 'hsl(160,60%,38%)',
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  border: '2px solid white',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                  cursor: 'pointer',
+                }}
+              />
+            </Marker>
+          ))}
+          {popupInfo && (
+            <Popup
+              longitude={popupInfo.lng}
+              latitude={popupInfo.lat}
+              anchor="bottom"
+              onClose={() => setPopupInfo(null)}
+              closeOnClick={false}
+            >
+              <b>{popupInfo.street}, д. {popupInfo.house}</b>
+              <br />кв. {popupInfo.apartment}, п. {popupInfo.entrance}
+            </Popup>
+          )}
+        </Map>
+      </div>
     </div>
   );
 };

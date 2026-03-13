@@ -1,45 +1,19 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { STATUS_LABELS, STATUS_COLORS } from '@/types';
 import { ArrowLeft, MapPin, Clock, User, MessageCircle, X, Check, Truck, CalendarIcon } from 'lucide-react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import Map, { Marker, NavigationControl } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoibmV1cm9hcnRodXIiLCJhIjoiY21tb2pxem5kMGU4ZjJwcjByZ3d6aGpuciJ9.vP-hvC2mgk8k2ZUkBzx8LA';
 
 const OrderDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, orders, updateOrderStatus } = useApp();
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
 
   const order = orders.find(o => o.id === id);
-
-  useEffect(() => {
-    if (!order || !mapRef.current || mapInstanceRef.current) return;
-
-    const map = L.map(mapRef.current).setView([order.lat, order.lng], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-    }).addTo(map);
-
-    const icon = L.divIcon({
-      html: `<div style="background:hsl(160,60%,38%);width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-      className: '',
-    });
-
-    L.marker([order.lat, order.lng], { icon }).addTo(map)
-      .bindPopup(`${order.street}, д. ${order.house}`);
-
-    mapInstanceRef.current = map;
-
-    return () => {
-      map.remove();
-      mapInstanceRef.current = null;
-    };
-  }, [order]);
 
   if (!order) {
     return (
@@ -67,7 +41,32 @@ const OrderDetails: React.FC = () => {
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden">
-        <div ref={mapRef} className="h-48 w-full" />
+        <div className="h-48 w-full">
+          <Map
+            initialViewState={{
+              longitude: order.lng,
+              latitude: order.lat,
+              zoom: 16,
+            }}
+            style={{ width: '100%', height: '100%' }}
+            mapStyle="mapbox://styles/mapbox/streets-v12"
+            mapboxAccessToken={MAPBOX_TOKEN}
+          >
+            <NavigationControl position="top-right" />
+            <Marker longitude={order.lng} latitude={order.lat} anchor="center">
+              <div
+                style={{
+                  background: 'hsl(160,60%,38%)',
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  border: '3px solid white',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+              />
+            </Marker>
+          </Map>
+        </div>
       </div>
 
       <div className="glass-card rounded-2xl p-4 space-y-3">
@@ -113,7 +112,6 @@ const OrderDetails: React.FC = () => {
             <MessageCircle className="w-4 h-4" /> Написать в чат
           </button>
         )}
-
 
         {isCourier && order.status === 'searching' && (
           <button
