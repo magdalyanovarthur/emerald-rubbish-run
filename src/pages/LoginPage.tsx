@@ -5,6 +5,8 @@ import { UserRole } from '@/types';
 import { Mail, Lock, User, Phone, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo.png';
+import LegalDocumentDialog from '@/components/LegalDocumentDialog';
+import { offerAgreementText, privacyPolicyText } from '@/data/legalTexts';
 
 const LoginPage: React.FC = () => {
   const { login, register } = useApp();
@@ -20,6 +22,9 @@ const LoginPage: React.FC = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showOffer, setShowOffer] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,9 +269,25 @@ const LoginPage: React.FC = () => {
 
             {error && <p className="text-destructive text-xs text-center">{error}</p>}
 
+            {!isLogin && (
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={e => setAgreedToTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-primary accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground leading-tight">
+                    Даю согласие на обработку и использование данных
+                  </span>
+                </label>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (!isLogin ? !agreedToTerms : false)}
               className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/20 transition-transform active:scale-[0.98] disabled:opacity-50"
             >
               {isLoading ? 'Загрузка...' : isLogin ? 'Войти' : 'Зарегистрироваться'}
@@ -281,8 +302,39 @@ const LoginPage: React.FC = () => {
               </button>
             )}
           </form>
+
+          <div className="flex justify-center gap-3 mt-4">
+            <button
+              type="button"
+              onClick={() => setShowOffer(true)}
+              className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+            >
+              Договор оферты
+            </button>
+            <span className="text-xs text-muted-foreground">•</span>
+            <button
+              type="button"
+              onClick={() => setShowPrivacy(true)}
+              className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+            >
+              Политика конфиденциальности
+            </button>
+          </div>
         </div>
       </div>
+
+      <LegalDocumentDialog
+        open={showOffer}
+        onClose={() => setShowOffer(false)}
+        title="Договор оферты"
+        content={offerAgreementText}
+      />
+      <LegalDocumentDialog
+        open={showPrivacy}
+        onClose={() => setShowPrivacy(false)}
+        title="Политика конфиденциальности"
+        content={privacyPolicyText}
+      />
     </div>
   );
 };
