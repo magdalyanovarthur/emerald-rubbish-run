@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { STREETS, STREET_COORDS, STREET_HOUSES } from '@/types';
 import { MapPin, Home, DoorOpen, MessageSquare, Send, CalendarIcon, Clock, Building } from 'lucide-react';
+import Map, { Marker, NavigationControl } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoibmV1cm9hcnRodXIiLCJhIjoiY21tb2pxem5kMGU4ZjJwcjByZ3d6aGpuciJ9.vP-hvC2mgk8k2ZUkBzx8LA';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -220,6 +224,46 @@ const CreateOrder: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Map preview */}
+        {street && isHouseValid && (
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="h-48 w-full">
+              <Map
+                key={`${street}-${house}`}
+                initialViewState={{
+                  longitude: (STREET_COORDS[street]?.lng || 50.15) + (Math.random() - 0.5) * 0.002,
+                  latitude: (STREET_COORDS[street]?.lat || 53.21) + (Math.random() - 0.5) * 0.002,
+                  zoom: 16,
+                }}
+                style={{ width: '100%', height: '100%' }}
+                mapStyle="mapbox://styles/mapbox/streets-v12"
+                mapboxAccessToken={MAPBOX_TOKEN}
+              >
+                <NavigationControl position="top-right" />
+                <Marker
+                  longitude={STREET_COORDS[street]?.lng || 50.15}
+                  latitude={STREET_COORDS[street]?.lat || 53.21}
+                  anchor="center"
+                >
+                  <div
+                    style={{
+                      background: 'hsl(160,60%,38%)',
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    }}
+                  />
+                </Marker>
+              </Map>
+            </div>
+            <div className="px-4 py-2">
+              <p className="text-xs text-muted-foreground">📍 {street}, д. {house}</p>
+            </div>
+          </div>
+        )}
 
         {error && <p className="text-destructive text-xs text-center">{error}</p>}
 
