@@ -225,6 +225,46 @@ const CreateOrder: React.FC = () => {
           </div>
         </div>
 
+        {/* Map preview */}
+        {street && isHouseValid && (
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="h-48 w-full">
+              <Map
+                key={`${street}-${house}`}
+                initialViewState={{
+                  longitude: (STREET_COORDS[street]?.lng || 50.15) + (Math.random() - 0.5) * 0.002,
+                  latitude: (STREET_COORDS[street]?.lat || 53.21) + (Math.random() - 0.5) * 0.002,
+                  zoom: 16,
+                }}
+                style={{ width: '100%', height: '100%' }}
+                mapStyle="mapbox://styles/mapbox/streets-v12"
+                mapboxAccessToken={MAPBOX_TOKEN}
+              >
+                <NavigationControl position="top-right" />
+                <Marker
+                  longitude={STREET_COORDS[street]?.lng || 50.15}
+                  latitude={STREET_COORDS[street]?.lat || 53.21}
+                  anchor="center"
+                >
+                  <div
+                    style={{
+                      background: 'hsl(160,60%,38%)',
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      border: '3px solid white',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    }}
+                  />
+                </Marker>
+              </Map>
+            </div>
+            <div className="px-4 py-2">
+              <p className="text-xs text-muted-foreground">📍 {street}, д. {house}</p>
+            </div>
+          </div>
+        )}
+
         {error && <p className="text-destructive text-xs text-center">{error}</p>}
 
         <button
