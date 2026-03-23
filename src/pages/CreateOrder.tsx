@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { STREETS, STREET_COORDS, STREET_HOUSES } from '@/types';
+import { useServiceZones } from '@/hooks/useServiceZones';
 import { MapPin, Home, DoorOpen, MessageSquare, Send, CalendarIcon, Clock, Building } from 'lucide-react';
 import Map, { Marker, NavigationControl } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -23,6 +23,7 @@ const TIMES = Array.from({ length: 6 }, (_, i) => {
 const CreateOrder: React.FC = () => {
   const { addOrder, subscription, user } = useApp();
   const navigate = useNavigate();
+  const { zones, loading: zonesLoading } = useServiceZones(true);
   const [street, setStreet] = useState('');
   const [house, setHouse] = useState('');
   const [apartment, setApartment] = useState('');
@@ -32,9 +33,13 @@ const CreateOrder: React.FC = () => {
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
 
+  const selectedZone = zones.find(z => z.street === street);
+  const availableHouses = selectedZone?.houses || [];
+  const isHouseValid = house.trim() !== '' && availableHouses.map(h => h.toLowerCase()).includes(house.trim().toLowerCase());
+
   // Автозаполнение адреса из профиля
   useEffect(() => {
-    if (!user) return;
+    if (!user || zonesLoading) return;
     const loadProfileAddress = async () => {
       const { data } = await supabase
         .from('profiles')
@@ -42,8 +47,9 @@ const CreateOrder: React.FC = () => {
         .eq('user_id', user.id)
         .single();
       if (data) {
-        if (data.profile_street && (STREETS as readonly string[]).includes(data.profile_street)) {
-          setStreet(data.profile_street as typeof STREETS[number]);
+        const streetNames = zones.map(z => z.street);
+        if (data.profile_street && streetNames.includes(data.profile_street)) {
+          setStreet(data.profile_street);
           if (data.profile_house) setHouse(data.profile_house);
         }
         if (data.profile_apartment) setApartment(data.profile_apartment);
@@ -51,10 +57,7 @@ const CreateOrder: React.FC = () => {
       }
     };
     loadProfileAddress();
-  }, [user]);
-
-  const availableHouses = street ? (STREET_HOUSES[street] || []) : [];
-  const isHouseValid = house.trim() !== '' && availableHouses.map(h => h.toLowerCase()).includes(house.trim().toLowerCase());
+  }, [user, zones, zonesLoading]);
 
   const handleStreetChange = (value: string) => {
     setStreet(value);
@@ -69,7 +72,7 @@ const CreateOrder: React.FC = () => {
       setError('Заполните обязательные поля');
       return;
     }
-    const coords = STREET_COORDS[street] || { lat: 53.2100, lng: 50.1500 };
+    const coords = selectedZone ? { lat: selectedZone.lat, lng: selectedZone.lng } : { lat: 53.2100, lng: 50.1500 };
     await addOrder({
       street,
       house,
@@ -84,6 +87,9 @@ const CreateOrder: React.FC = () => {
     });
     navigate('/');
   };
+
+  const mapLng = selectedZone?.lng || 50.15;
+  const mapLat = selectedZone?.lat || 53.21;
 
   return (
     <div className="space-y-4 animate-slide-up">
@@ -102,10 +108,11 @@ const CreateOrder: React.FC = () => {
               <select
                 value={street}
                 onChange={e => handleStreetChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring appearance-none"
+                disabled={zonesLoading}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary text-foreground text-sm outline-none focus:ring-2 focus:ring-ring appearance-none disabled:opacity-50"
               >
-                <option value="">Выберите улицу</option>
-                {STREETS.map(s => <option key={s} value={s}>{s}</option>)}
+                <option value="">{zonesLoading ? 'Загрузка...' : 'Выберите улицу'}</option>
+                {zones.map(z => <option key={z.id} value={z.street}>{z.street}</option>)}
               </select>
             </div>
           </div>
@@ -232,8 +239,8 @@ const CreateOrder: React.FC = () => {
               <Map
                 key={`${street}-${house}`}
                 initialViewState={{
-                  longitude: (STREET_COORDS[street]?.lng || 50.15) + (Math.random() - 0.5) * 0.002,
-                  latitude: (STREET_COORDS[street]?.lat || 53.21) + (Math.random() - 0.5) * 0.002,
+                  longitude: mapLng + (Math.random() - 0.5) * 0.002,
+                  latitude: mapLat + (Math.random() - 0.5) * 0.002,
                   zoom: 16,
                 }}
                 style={{ width: '100%', height: '100%' }}
@@ -241,11 +248,7 @@ const CreateOrder: React.FC = () => {
                 mapboxAccessToken={MAPBOX_TOKEN}
               >
                 <NavigationControl position="top-right" />
-                <Marker
-                  longitude={STREET_COORDS[street]?.lng || 50.15}
-                  latitude={STREET_COORDS[street]?.lat || 53.21}
-                  anchor="center"
-                >
+                <Marker longitude={mapLng} latitude={mapLat} anchor="center">
                   <div
                     style={{
                       background: 'hsl(160,60%,38%)',
