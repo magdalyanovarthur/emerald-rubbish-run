@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { STATUS_LABELS, STATUS_COLORS, OrderStatus } from '@/types';
 import { useNavigate } from 'react-router-dom';
-import { Package, X, BarChart3, Download, Filter, Search, CalendarIcon, MapPin, Clock, User, Truck, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, X, BarChart3, Download, Filter, Search, CalendarIcon, MapPin, Clock, User, Truck, MessageCircle, ChevronDown, ChevronUp, Map } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import ServiceZonesManager from '@/components/admin/ServiceZonesManager';
 
 type FilterStatus = 'all' | OrderStatus;
 
@@ -14,7 +15,7 @@ const AdminPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [activeTab, setActiveTab] = useState<'orders' | 'chats'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'chats' | 'zones'>('orders');
   const [expandedChat, setExpandedChat] = useState<string | null>(null);
 
   // Filter orders within 1 year
@@ -117,7 +118,15 @@ const AdminPanel: React.FC = () => {
             activeTab === 'chats' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
           }`}
         >
-          <MessageCircle className="w-4 h-4 inline mr-1.5" />Чаты ({chats.length})
+          <MessageCircle className="w-4 h-4 inline mr-1.5" />Чаты
+        </button>
+        <button
+          onClick={() => setActiveTab('zones')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            activeTab === 'zones' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          }`}
+        >
+          <Map className="w-4 h-4 inline mr-1.5" />Зоны
         </button>
       </div>
 
@@ -347,6 +356,7 @@ const AdminPanel: React.FC = () => {
           )}
         </div>
       )}
+      {activeTab === 'zones' && <ServiceZonesManager />}
     </div>
   );
 };

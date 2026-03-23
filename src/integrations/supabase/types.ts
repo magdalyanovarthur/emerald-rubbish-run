@@ -243,6 +243,36 @@ export type Database = {
         }
         Relationships: []
       }
+      service_zones: {
+        Row: {
+          created_at: string
+          houses: string[]
+          id: string
+          is_active: boolean
+          lat: number
+          lng: number
+          street: string
+        }
+        Insert: {
+          created_at?: string
+          houses?: string[]
+          id?: string
+          is_active?: boolean
+          lat?: number
+          lng?: number
+          street: string
+        }
+        Update: {
+          created_at?: string
+          houses?: string[]
+          id?: string
+          is_active?: boolean
+          lat?: number
+          lng?: number
+          street?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
