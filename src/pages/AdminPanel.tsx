@@ -15,7 +15,7 @@ const AdminPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [activeTab, setActiveTab] = useState<'orders' | 'chats'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'chats' | 'zones'>('orders');
   const [expandedChat, setExpandedChat] = useState<string | null>(null);
 
   // Filter orders within 1 year
