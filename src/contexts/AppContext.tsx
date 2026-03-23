@@ -171,57 +171,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         profileFloor: data.profile_floor || '',
         profileApartment: data.profile_apartment || '',
       });
+    } else {
+      // Profile not found — create minimal user from session
+      setUser({
+        id: userId,
+        name: email.split('@')[0],
+        phone: '',
+        email,
+        role: 'client' as UserRole,
+        address: '',
+        avatarUrl: '',
+      });
     }
   }, []);
 
   // Initial auth + data load
   useEffect(() => {
+    // Global safety timeout — force loading off after 8 seconds no matter what
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession);
         if (newSession?.user) {
-          await fetchProfile(newSession.user.id, newSession.user.email || '');
-          fetchOrders();
-          fetchChats();
-          fetchMessages();
-          fetchSubscription(newSession.user.id);
+          try {
+            await fetchProfile(newSession.user.id, newSession.user.email || '');
+            fetchOrders();
+            fetchChats();
+            fetchMessages();
+            fetchSubscription(newSession.user.id);
+          } catch (e) {
+            console.error('onAuthStateChange data fetch error:', e);
+          } finally {
+            setLoading(false);
+          }
         } else {
           setUser(null);
           setOrders([]);
           setChats([]);
           setMessages([]);
           setSubscription(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    // Safety timeout: force loading off after 5 seconds
-    const loadingTimeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
-
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
       if (currentSession?.user) {
-        fetchProfile(currentSession.user.id, currentSession.user.email || '');
-        fetchOrders();
-        fetchChats();
-        fetchMessages();
-        fetchSubscription(currentSession.user.id).finally(() => {
-          clearTimeout(loadingTimeout);
+        try {
+          await fetchProfile(currentSession.user.id, currentSession.user.email || '');
+          fetchOrders();
+          fetchChats();
+          fetchMessages();
+          await fetchSubscription(currentSession.user.id);
+        } catch (e) {
+          console.error('getSession data fetch error:', e);
+        } finally {
           setLoading(false);
-        });
+        }
       } else {
-        clearTimeout(loadingTimeout);
         setLoading(false);
       }
-    }).catch(() => {
-      clearTimeout(loadingTimeout);
+    }).catch((e) => {
+      console.error('getSession error:', e);
       setLoading(false);
     });
 
-    return () => authSub.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimeout);
+      authSub.unsubscribe();
+    };
   }, [fetchProfile, fetchOrders, fetchChats, fetchMessages, fetchSubscription]);
 
   // --- Realtime subscriptions with courier notifications ---
