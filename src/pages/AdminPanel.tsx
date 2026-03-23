@@ -118,7 +118,15 @@ const AdminPanel: React.FC = () => {
             activeTab === 'chats' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
           }`}
         >
-          <MessageCircle className="w-4 h-4 inline mr-1.5" />Чаты ({chats.length})
+          <MessageCircle className="w-4 h-4 inline mr-1.5" />Чаты
+        </button>
+        <button
+          onClick={() => setActiveTab('zones')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            activeTab === 'zones' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+          }`}
+        >
+          <Map className="w-4 h-4 inline mr-1.5" />Зоны
         </button>
       </div>
 
