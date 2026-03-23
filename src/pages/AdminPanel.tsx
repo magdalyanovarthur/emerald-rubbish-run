@@ -356,6 +356,7 @@ const AdminPanel: React.FC = () => {
           )}
         </div>
       )}
+      {activeTab === 'zones' && <ServiceZonesManager />}
     </div>
   );
 };
