@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { STATUS_LABELS, STATUS_COLORS, OrderStatus } from '@/types';
 import { useNavigate } from 'react-router-dom';
-import { Package, X, BarChart3, Download, Filter, Search, CalendarIcon, MapPin, Clock, User, Truck, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, X, BarChart3, Download, Filter, Search, CalendarIcon, MapPin, Clock, User, Truck, MessageCircle, ChevronDown, ChevronUp, Map } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import ServiceZonesManager from '@/components/admin/ServiceZonesManager';
 
 type FilterStatus = 'all' | OrderStatus;
 
