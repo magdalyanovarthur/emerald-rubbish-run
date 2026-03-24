@@ -304,8 +304,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- Auth actions ---
   const login = useCallback(async (email: string, password: string) => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setLoading(false);
       if (error.message.includes('Email not confirmed')) {
         return { success: false, error: 'Подтвердите email перед входом. Проверьте почту.' };
       }
