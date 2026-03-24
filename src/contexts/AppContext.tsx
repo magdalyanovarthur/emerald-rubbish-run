@@ -196,6 +196,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       async (event, newSession) => {
         setSession(newSession);
         if (newSession?.user) {
+          setLoading(true);
           try {
             await fetchProfile(newSession.user.id, newSession.user.email || '');
             fetchOrders();
